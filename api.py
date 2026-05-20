@@ -27,12 +27,7 @@ def get_topics():
     return {"topics": files}
 
 
-@app.get("/api/question")
-def get_question(topic: str = ""):
-    questions = _load_questions(topic)
-    if not questions:
-        raise HTTPException(404, "Aucun chunk pour ce sujet")
-    q = random.choice(questions)
+def _fmt_question(q: dict) -> dict:
     return {
         "chunk": {
             "id": q["chunk_id"],
@@ -44,6 +39,23 @@ def get_question(topic: str = ""):
         "question": q["question"],
         "expected": q["expected"],
     }
+
+
+@app.get("/api/question")
+def get_question(topic: str = ""):
+    questions = _load_questions(topic)
+    if not questions:
+        raise HTTPException(404, "Aucun chunk pour ce sujet")
+    return _fmt_question(random.choice(questions))
+
+
+@app.get("/api/session")
+def get_session(topic: str = "", count: int = 10):
+    questions = _load_questions(topic)
+    if not questions:
+        raise HTTPException(404, "Aucun chunk pour ce sujet")
+    sample = random.sample(questions, min(count, len(questions)))
+    return {"questions": [_fmt_question(q) for q in sample]}
 
 
 class EvaluateRequest(BaseModel):

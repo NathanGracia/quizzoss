@@ -2,6 +2,9 @@ const $ = id => document.getElementById(id)
 
 const state = {
   topic: '',
+  session: [],
+  index: 0,
+  score: 0,
   chunk: null,
   question: null,
   expected: null,
@@ -23,21 +26,17 @@ async function init() {
   sel.addEventListener('change', () => { state.topic = sel.value })
 }
 
-// ── Quiz ──────────────────────────────────────────────────────────────────────
+// ── Session ───────────────────────────────────────────────────────────────────
 
-async function loadQuestion() {
-  // Switch to quiz panel, show skeleton
+async function startSession() {
   $('state-welcome').classList.add('hidden')
+  $('state-end').classList.add('hidden')
   $('state-quiz').classList.remove('hidden')
-  $('q-skeleton').classList.remove('hidden')
-  $('q-text').classList.add('hidden')
-  $('answer-area').classList.add('hidden')
-  $('result-area').classList.add('hidden')
-  $('src-file').textContent = '…'
-  $('src-section').textContent = ''
+  showQuizSkeleton()
 
-  const params = state.topic ? `?topic=${encodeURIComponent(state.topic)}` : ''
-  const res = await fetch(`/api/question${params}`)
+  const params = new URLSearchParams({ count: 10 })
+  if (state.topic) params.set('topic', state.topic)
+  const res = await fetch(`/api/session?${params}`)
 
   if (!res.ok) {
     showQuestionError('Erreur lors du chargement. Réessaie.')
@@ -45,22 +44,45 @@ async function loadQuestion() {
   }
 
   const data = await res.json()
-  state.chunk    = data.chunk
-  state.question = data.question
-  state.expected = data.expected
+  state.session = data.questions
+  state.index = 0
+  state.score = 0
+  showQuestion(0)
+}
 
-  // Source
-  $('src-file').textContent    = data.chunk.source_file.split('/').pop().replace('.md', '')
-  $('src-section').textContent = data.chunk.heading_path
+function showQuestion(i) {
+  const q = state.session[i]
+  state.index = i
+  state.chunk = q.chunk
+  state.question = q.question
+  state.expected = q.expected
+  state.chatHistory = []
 
-  // Question
+  const total = state.session.length
+  $('q-progress').textContent = `Question ${i + 1} / ${total}`
+  $('q-score').textContent = `${state.score} ✓`
+  $('progress-fill').style.width = `${(i / total) * 100}%`
+
+  $('src-file').textContent = q.chunk.source_file.split('/').pop().replace('.md', '')
+  $('src-section').textContent = q.chunk.heading_path
+
   $('q-skeleton').classList.add('hidden')
-  $('q-text').textContent = data.question
+  $('q-text').textContent = q.question
   $('q-text').classList.remove('hidden')
   $('answer-area').classList.remove('hidden')
+  $('result-area').classList.add('hidden')
 
   $('answer-input').value = ''
   $('answer-input').focus()
+}
+
+function showQuizSkeleton() {
+  $('q-skeleton').classList.remove('hidden')
+  $('q-text').classList.add('hidden')
+  $('answer-area').classList.add('hidden')
+  $('result-area').classList.add('hidden')
+  $('src-file').textContent = '…'
+  $('src-section').textContent = ''
 }
 
 function showQuestionError(msg) {
@@ -68,6 +90,14 @@ function showQuestionError(msg) {
   $('q-text').textContent = msg
   $('q-text').classList.remove('hidden')
 }
+
+function skipQuestion() {
+  const isLast = state.index >= state.session.length - 1
+  if (isLast) showEndScreen()
+  else showQuestion(state.index + 1)
+}
+
+// ── Quiz ──────────────────────────────────────────────────────────────────────
 
 async function submitAnswer() {
   const answer = $('answer-input').value.trim()
@@ -95,12 +125,21 @@ async function submitAnswer() {
   const cls = ok ? 'ok' : 'err'
   const icon = ok ? '✓' : '✗'
 
+  if (ok) state.score++
+  $('q-score').textContent = `${state.score} ✓`
+
+  const isLast = state.index >= state.session.length - 1
+
   $('result-card').className = `result-card ${cls}`
   $('result-card').innerHTML = `
     <div class="result-status ${cls}">${icon} ${result.statut ?? '?'}</div>
     ${result.explication ? `<div class="result-expl">${esc(result.explication)}</div>` : ''}
     <div class="result-source">→ ${esc(state.chunk.source_file)}</div>
   `
+
+  const nextBtn = $('next-btn')
+  nextBtn.textContent = isLast ? 'Voir les résultats →' : 'Question suivante →'
+  nextBtn.onclick = isLast ? showEndScreen : () => showQuestion(state.index + 1)
 }
 
 function handleKey(e) {
@@ -108,6 +147,29 @@ function handleKey(e) {
     e.preventDefault()
     submitAnswer()
   }
+}
+
+// ── End screen ────────────────────────────────────────────────────────────────
+
+function showEndScreen() {
+  $('state-quiz').classList.add('hidden')
+  $('state-end').classList.remove('hidden')
+
+  const total = state.session.length
+  const score = state.score
+  const pct = Math.round((score / total) * 100)
+
+  $('end-score').textContent = `${score} / ${total}`
+  $('end-bar').style.width = `${pct}%`
+
+  let title, msg
+  if (pct >= 80)      { title = 'Excellent !';   msg = 'Tu maîtrises bien le sujet.' }
+  else if (pct >= 60) { title = 'Bien joué !';   msg = 'Continue comme ça.' }
+  else if (pct >= 40) { title = 'Pas mal !';     msg = 'Encore un peu de révision et tu y es.' }
+  else                { title = 'À réviser.';    msg = 'Relis tes notes et retente !' }
+
+  $('end-title').textContent = title
+  $('end-msg').textContent = msg
 }
 
 // ── Chat ──────────────────────────────────────────────────────────────────────

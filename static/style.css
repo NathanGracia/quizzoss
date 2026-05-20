@@ -99,6 +99,38 @@ main {
   color: var(--muted); margin-bottom: 2.5rem; font-size: .9375rem;
 }
 
+/* ── Session progress ───────────────────── */
+.session-progress {
+  margin-bottom: 1.25rem;
+}
+.progress-info {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: .5rem;
+}
+.progress-label {
+  font-size: .75rem; color: var(--muted); font-weight: 500;
+}
+.score-badge {
+  font-size: .75rem; font-weight: 600;
+  color: var(--ok);
+  background: var(--ok-dim);
+  border: 1px solid rgba(74,222,128,.2);
+  border-radius: 20px;
+  padding: .15rem .625rem;
+}
+.progress-track {
+  height: 4px;
+  background: var(--surface-2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width .35s ease;
+}
+
 /* ── Source badge ───────────────────────── */
 .source-badge {
   display: flex; align-items: center; gap: .375rem;
@@ -228,6 +260,45 @@ main {
   transition: color .15s;
 }
 .icon-btn:hover { color: var(--text); }
+
+/* ── End screen ─────────────────────────── */
+.end-wrap {
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center; padding: 4rem 1rem;
+}
+.end-icon {
+  font-size: 3rem; color: var(--accent);
+  margin-bottom: 1.5rem;
+  animation: glow 3s ease-in-out infinite;
+}
+.end-wrap h1 {
+  font-size: 2rem; font-weight: 700;
+  letter-spacing: -.03em; margin-bottom: 1rem;
+}
+.end-score {
+  font-size: 3.5rem; font-weight: 700;
+  letter-spacing: -.04em;
+  color: var(--accent);
+  margin-bottom: 1.25rem;
+  line-height: 1;
+}
+.end-bar-wrap {
+  width: 240px; height: 6px;
+  background: var(--surface-2);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+}
+.end-bar {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width .6s ease;
+}
+.end-msg {
+  color: var(--muted); font-size: .9375rem;
+  margin-bottom: 2.5rem;
+}
 
 /* ── Chat ───────────────────────────────── */
 .chat-backdrop {

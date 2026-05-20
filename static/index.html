@@ -29,13 +29,23 @@
       <div class="welcome-wrap">
         <div class="welcome-icon">◈</div>
         <h1>Prêt à te tester ?</h1>
-        <p>L'IA génère une question depuis tes notes Obsidian.</p>
-        <button class="btn btn-primary btn-lg" onclick="loadQuestion()">Générer une question</button>
+        <p>10 questions uniques tirées de tes notes Obsidian.</p>
+        <button class="btn btn-primary btn-lg" onclick="startSession()">Démarrer la session →</button>
       </div>
     </div>
 
     <!-- Quiz -->
     <div id="state-quiz" class="state hidden">
+
+      <div class="session-progress">
+        <div class="progress-info">
+          <span id="q-progress" class="progress-label">Question 1 / 10</span>
+          <span id="q-score" class="score-badge">0 ✓</span>
+        </div>
+        <div class="progress-track">
+          <div id="progress-fill" class="progress-fill"></div>
+        </div>
+      </div>
 
       <div class="source-badge">
         <span class="badge-file" id="src-file"></span>
@@ -62,18 +72,33 @@
         <div class="actions">
           <button class="btn btn-primary" onclick="submitAnswer()">Valider ✓</button>
           <button class="btn btn-ghost" onclick="openChat()">💬 Tuteur</button>
-          <button class="btn btn-ghost" onclick="loadQuestion()">Passer →</button>
+          <button class="btn btn-ghost" onclick="skipQuestion()">Passer →</button>
         </div>
       </div>
 
       <div id="result-area" class="result-area hidden">
         <div id="result-card" class="result-card"></div>
-        <button class="btn btn-primary" style="margin-top:1.25rem" onclick="loadQuestion()">
+        <button id="next-btn" class="btn btn-primary" style="margin-top:1.25rem">
           Question suivante →
         </button>
       </div>
 
     </div>
+
+    <!-- End screen -->
+    <div id="state-end" class="state hidden">
+      <div class="end-wrap">
+        <div class="end-icon">◈</div>
+        <h1 id="end-title">Session terminée !</h1>
+        <div id="end-score" class="end-score">0 / 10</div>
+        <div class="end-bar-wrap">
+          <div id="end-bar" class="end-bar"></div>
+        </div>
+        <p id="end-msg" class="end-msg"></p>
+        <button class="btn btn-primary btn-lg" onclick="startSession()">Recommencer →</button>
+      </div>
+    </div>
+
   </main>
 
   <!-- Chat drawer -->
