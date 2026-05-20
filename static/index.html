@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quizzoss</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header>
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-mark">◈</span>
+        <span>Quizzoss</span>
+      </div>
+      <select id="topic-select" class="topic-select">
+        <option value="">Tous les sujets</option>
+      </select>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- Welcome -->
+    <div id="state-welcome" class="state">
+      <div class="welcome-wrap">
+        <div class="welcome-icon">◈</div>
+        <h1>Prêt à te tester ?</h1>
+        <p>L'IA génère une question depuis tes notes Obsidian.</p>
+        <button class="btn btn-primary btn-lg" onclick="loadQuestion()">Générer une question</button>
+      </div>
+    </div>
+
+    <!-- Quiz -->
+    <div id="state-quiz" class="state hidden">
+
+      <div class="source-badge">
+        <span class="badge-file" id="src-file"></span>
+        <span class="badge-sep">›</span>
+        <span class="badge-section" id="src-section"></span>
+      </div>
+
+      <div class="question-card" id="question-card">
+        <div id="q-skeleton" class="skeleton">
+          <div class="sk-line" style="width:85%"></div>
+          <div class="sk-line" style="width:60%;margin-top:.75rem"></div>
+        </div>
+        <p id="q-text" class="q-text hidden"></p>
+      </div>
+
+      <div id="answer-area" class="answer-area hidden">
+        <textarea
+          id="answer-input"
+          class="answer-input"
+          placeholder="Ta réponse… (Ctrl+Entrée pour valider)"
+          rows="3"
+          onkeydown="handleKey(event)"
+        ></textarea>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="submitAnswer()">Valider ✓</button>
+          <button class="btn btn-ghost" onclick="openChat()">💬 Tuteur</button>
+          <button class="btn btn-ghost" onclick="loadQuestion()">Passer →</button>
+        </div>
+      </div>
+
+      <div id="result-area" class="result-area hidden">
+        <div id="result-card" class="result-card"></div>
+        <button class="btn btn-primary" style="margin-top:1.25rem" onclick="loadQuestion()">
+          Question suivante →
+        </button>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Chat drawer -->
+  <div id="chat-backdrop" class="chat-backdrop hidden" onclick="closeChat()"></div>
+  <div id="chat-drawer" class="chat-drawer hidden">
+    <div class="chat-header">
+      <div>
+        <div class="chat-title">💬 Tuteur IA</div>
+        <div class="chat-sub" id="chat-sub"></div>
+      </div>
+      <button class="icon-btn" onclick="closeChat()">✕</button>
+    </div>
+    <div id="chat-msgs" class="chat-msgs"></div>
+    <div class="chat-footer">
+      <textarea
+        id="chat-input"
+        class="chat-input"
+        placeholder="Pose ta question… (Entrée pour envoyer)"
+        rows="2"
+        onkeydown="handleChatKey(event)"
+      ></textarea>
+      <button class="btn btn-primary" onclick="sendChat()">Envoyer</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
