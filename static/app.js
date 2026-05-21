@@ -2,7 +2,7 @@ const $ = id => document.getElementById(id)
 
 const state = {
   topic: '',
-  mcqMode: false,
+  mcqMode: true,
   session: [],
   index: 0,
   score: 0,
