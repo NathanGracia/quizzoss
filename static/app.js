@@ -230,7 +230,7 @@ async function submitAnswer() {
   `
 
   const srcLink = $('result-source-link')
-  if (srcLink) srcLink.onclick = () => openNote(state.chunk.source_file, state.chunk.heading_path)
+  if (srcLink) srcLink.onclick = () => _openNoteNewTab(state.chunk.source_file, state.chunk.heading_path)
 
   state.chatHistory = []
   $('inline-chat').classList.remove('hidden')
@@ -528,6 +528,13 @@ async function _pollRebuild() {
     $('library-list').removeAttribute('data-loaded')
     loadLibrary()
   }
+}
+
+function _openNoteNewTab(file, section) {
+  const sp = new URLSearchParams()
+  sp.set('note', file)
+  if (section) sp.set('section', section)
+  window.open(`?${sp.toString()}`, '_blank')
 }
 
 // ── Note viewer ───────────────────────────────────────────────────────────────

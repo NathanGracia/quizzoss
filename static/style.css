@@ -393,11 +393,12 @@ main {
   margin-bottom: .6rem;
 }
 .result-source {
-  font-size: .72rem; color: var(--muted);
-  margin-top: 1rem; cursor: default;
-  transition: color .15s;
+  font-size: .72rem; color: var(--accent);
+  margin-top: 1rem; cursor: pointer;
+  text-decoration: underline; text-underline-offset: 3px;
+  transition: color .15s, opacity .15s;
 }
-.result-source:hover { color: var(--text-2); }
+.result-source:hover { opacity: .75; }
 
 /* ── Buttons ─────────────────────────────── */
 .btn {
