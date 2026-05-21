@@ -361,12 +361,34 @@ async function loadLibrary() {
 
 // ── Note viewer ───────────────────────────────────────────────────────────────
 
+function _extractBlock(md, blockId) {
+  const lines = md.split('\n')
+  const anchorRe = new RegExp(`\\^${blockId}\\s*$`)
+  for (let i = 0; i < lines.length; i++) {
+    if (!anchorRe.test(lines[i])) continue
+    const content = lines[i].replace(anchorRe, '').trim()
+    if (content) return content
+    // Standalone anchor line — collect preceding paragraph
+    const block = []
+    let j = i - 1
+    while (j >= 0 && lines[j].trim() !== '') { block.unshift(lines[j]); j-- }
+    return block.join('\n').trim() || null
+  }
+  return null
+}
+
 function preprocessMd(md) {
-  md = md.replace(/!\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g, (_, src) =>
-    `![](${src.trim()})`)
-  md = md.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
-    if (/^https?:\/\//.test(src)) return match
-    return `![${alt}](/api/asset?file=${encodeURIComponent(src.trim())})`
+  const src = md
+  // Same-file block embeds: ![[#^block-id]]
+  md = md.replace(/!\[\[#\^([\w-]+)\]\]/g, (_, blockId) => {
+    const block = _extractBlock(src, blockId)
+    return block != null ? block : `*[embed introuvable : ^${blockId}]*`
+  })
+  // Wiki-link images: ![[file.png]] or ![[file.png|alt]]
+  md = md.replace(/!\[\[([^\]#|]+)(?:\|[^\]]+)?\]\]/g, (_, s) => `![](${s.trim()})`)
+  md = md.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, s) => {
+    if (/^https?:\/\//.test(s)) return match
+    return `![${alt}](/api/asset?file=${encodeURIComponent(s.trim())})`
   })
   return md
 }
