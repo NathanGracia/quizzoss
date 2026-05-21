@@ -165,12 +165,38 @@ main {
 }
 
 .home-launcher {
-  display: flex; gap: 0;
+  display: flex; align-items: stretch; gap: 0;
   border: var(--stroke) solid var(--accent);
   box-shadow: 4px 4px 0 rgba(124,109,248,.3);
-  max-width: 560px;
+  max-width: 600px;
   transition: box-shadow .2s;
 }
+.mode-toggle {
+  display: flex; align-items: center; gap: .5rem;
+  padding: 0 1rem;
+  border-right: var(--stroke) solid var(--dim);
+  cursor: pointer; user-select: none;
+}
+.mode-toggle input { display: none; }
+.toggle-track {
+  width: 30px; height: 16px; flex-shrink: 0;
+  background: var(--dim); border: 1px solid var(--muted);
+  position: relative; transition: background .2s, border-color .2s;
+}
+.toggle-knob {
+  position: absolute; top: 2px; left: 2px;
+  width: 10px; height: 10px;
+  background: var(--muted);
+  transition: transform .2s, background .2s;
+}
+.mode-toggle:has(input:checked) .toggle-track { background: var(--accent); border-color: var(--accent); }
+.mode-toggle:has(input:checked) .toggle-knob  { transform: translateX(14px); background: #fff; }
+.toggle-label {
+  font-family: var(--font-display); font-weight: 700;
+  font-size: .7rem; letter-spacing: .15em; text-transform: uppercase;
+  color: var(--muted); transition: color .2s;
+}
+.mode-toggle:has(input:checked) .toggle-label { color: var(--accent); }
 .home-launcher:focus-within {
   box-shadow: 6px 6px 0 var(--accent);
 }
@@ -524,6 +550,41 @@ main {
   font-size: .6rem; letter-spacing: .15em; text-transform: uppercase;
   color: var(--muted); margin-bottom: .25rem;
 }
+
+/* ── QCM ─────────────────────────────────── */
+.mcq-options {
+  display: flex; flex-direction: column; gap: .5rem;
+  margin-bottom: 1rem;
+}
+.mcq-option {
+  display: flex; align-items: flex-start; gap: 1rem;
+  width: 100%; text-align: left;
+  padding: .875rem 1.25rem;
+  background: var(--surface); border: var(--stroke) solid var(--dim);
+  color: var(--text); font-family: var(--font); font-size: .85rem; line-height: 1.5;
+  cursor: pointer; transition: border-color .12s, box-shadow .12s;
+  box-shadow: 2px 2px 0 var(--dim);
+}
+.mcq-option:hover:not(:disabled) {
+  border-color: var(--accent);
+  box-shadow: 3px 3px 0 var(--accent);
+}
+.mcq-option:disabled { cursor: default; }
+.mcq-letter {
+  font-family: var(--font-display); font-weight: 900;
+  font-size: .8rem; letter-spacing: .12em;
+  color: var(--accent); flex-shrink: 0; margin-top: .1em;
+}
+.mcq-option.mcq-correct {
+  border-color: var(--ok); background: rgba(34,197,94,.07);
+  box-shadow: 3px 3px 0 var(--ok);
+}
+.mcq-option.mcq-correct .mcq-letter { color: var(--ok); }
+.mcq-option.mcq-wrong {
+  border-color: var(--err); background: rgba(239,68,68,.07);
+  box-shadow: 3px 3px 0 var(--err);
+}
+.mcq-option.mcq-wrong .mcq-letter { color: var(--err); }
 
 /* ── Chat inline ─────────────────────────── */
 .inline-chat {

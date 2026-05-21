@@ -47,6 +47,7 @@ def prebuild(force: bool = False) -> None:
                     "content":        chunk["content"],
                     "question":       qa["question"],
                     "expected":       qa["reponse_attendue"],
+                    "distractors":    qa.get("distracteurs", []),
                 })
                 QUESTIONS_FILE.write_text(json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8")
                 break
@@ -121,6 +122,7 @@ def rebuild() -> dict:
                     "content":        chunk["content"],
                     "question":       qa["question"],
                     "expected":       qa["reponse_attendue"],
+                    "distractors":    qa.get("distracteurs", []),
                 })
                 QUESTIONS_FILE.write_text(json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8")
                 break
@@ -137,6 +139,19 @@ def rebuild() -> dict:
                 print(f"  [ERREUR] {e}")
                 break
         if i < len(to_do) - 1:
+            time.sleep(RPM_DELAY)
+
+    # Backfill des distracteurs manquants
+    to_backfill = [r for r in results if not r.get("distractors")]
+    print(f"[rebuild] {len(to_backfill)} questions sans distracteurs à compléter")
+    for i, q in enumerate(to_backfill):
+        try:
+            print(f"  [dist {i+1}/{len(to_backfill)}] {q['source_file']} | {q['heading_path'][:55]}")
+            q["distractors"] = llm.generate_distractors(q["question"], q["expected"], q["content"])
+            QUESTIONS_FILE.write_text(json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8")
+        except Exception as e:
+            print(f"  [ERREUR distract.] {e}")
+        if i < len(to_backfill) - 1:
             time.sleep(RPM_DELAY)
 
     print(f"[rebuild] Terminé. {len(results)} questions au total.")

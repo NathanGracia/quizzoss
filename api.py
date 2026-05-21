@@ -37,8 +37,9 @@ def _fmt_question(q: dict) -> dict:
             "parent_context": q["parent_context"],
             "content": q["content"],
         },
-        "question": q["question"],
-        "expected": q["expected"],
+        "question":    q["question"],
+        "expected":    q["expected"],
+        "distractors": q.get("distractors", []),
     }
 
 

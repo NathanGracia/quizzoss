@@ -45,6 +45,11 @@
               <select id="topic-select" class="topic-select">
                 <option value="">_ tous les sujets</option>
               </select>
+              <label class="mode-toggle">
+                <input type="checkbox" id="mcq-check">
+                <span class="toggle-track"><span class="toggle-knob"></span></span>
+                <span class="toggle-label">QCM</span>
+              </label>
               <button class="btn btn-primary btn-lg" onclick="startSession()">Lancer →</button>
             </div>
           </div>
@@ -101,8 +106,9 @@
           rows="3"
           onkeydown="handleKey(event)"
         ></textarea>
+        <div id="mcq-options" class="mcq-options hidden"></div>
         <div class="actions">
-          <button class="btn btn-primary" onclick="submitAnswer()">Valider ✓</button>
+          <button id="answer-validate-btn" class="btn btn-primary" onclick="submitAnswer()">Valider ✓</button>
           <button class="btn btn-ghost" onclick="skipQuestion()">Passer →</button>
         </div>
       </div>
@@ -169,6 +175,6 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script src="app.js?v=19"></script>
+  <script src="app.js?v=21"></script>
 </body>
 </html>

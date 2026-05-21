@@ -2,6 +2,7 @@ const $ = id => document.getElementById(id)
 
 const state = {
   topic: '',
+  mcqMode: false,
   session: [],
   index: 0,
   score: 0,
@@ -32,6 +33,7 @@ async function init() {
     sel.appendChild(opt)
   })
   sel.addEventListener('change', () => { state.topic = sel.value })
+  $('mcq-check').addEventListener('change', e => { state.mcqMode = e.target.checked })
 
   const { note, section } = _getUrlParams()
   if (note) {
@@ -138,8 +140,17 @@ function showQuestion(i) {
   $('answer-area').classList.remove('hidden')
   $('result-area').classList.add('hidden')
 
-  $('answer-input').value = ''
-  $('answer-input').focus()
+  if (state.mcqMode) {
+    $('answer-input').classList.add('hidden')
+    $('answer-validate-btn').classList.add('hidden')
+    _showMCQOptions(_getMCQOptions(i))
+  } else {
+    $('answer-input').classList.remove('hidden')
+    $('answer-validate-btn').classList.remove('hidden')
+    $('mcq-options').classList.add('hidden')
+    $('answer-input').value = ''
+    $('answer-input').focus()
+  }
 }
 
 function showQuizSkeleton() {
@@ -201,6 +212,10 @@ async function submitAnswer() {
   }
 
   const result = await res.json()
+  _renderResult(result)
+}
+
+function _renderResult(result) {
   state.evalResult = result
   state.history.push({
     chunk: state.chunk,
@@ -210,8 +225,8 @@ async function submitAnswer() {
     evalResult: result,
     chatHistory: [],
   })
-  // Partage la référence — les messages du chat en cours alimentent l'item d'historique
   state.chatHistory = state.history[state.history.length - 1].chatHistory
+
   const statut = result.statut?.toLowerCase() ?? ''
   const ok   = statut.includes('réussi')
   const half = statut.includes('incomplet')
@@ -230,7 +245,6 @@ async function submitAnswer() {
     ${result.reponse_ideale ? `<div class="result-ideal"><span class="result-ideal-label">Réponse idéale</span>${esc(result.reponse_ideale)}</div>` : ''}
     <div class="result-source note-link" id="result-source-link">→ ${esc(state.chunk.source_file)}</div>
   `
-
   const srcLink = $('result-source-link')
   if (srcLink) srcLink.onclick = () => _openNoteNewTab(state.chunk.source_file, state.chunk.heading_path)
 
@@ -370,6 +384,56 @@ async function sendRecapChat(idx) {
 
 function handleRecapKey(e, idx) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendRecapChat(idx) }
+}
+
+// ── QCM ───────────────────────────────────────────────────────────────────────
+
+function _getMCQOptions(idx) {
+  const q = state.session[idx]
+  const distractors = q.distractors?.length >= 3
+    ? q.distractors.slice(0, 3)
+    : state.session.filter((_, i) => i !== idx).sort(() => Math.random() - 0.5).slice(0, 3).map(s => s.expected)
+  return [q.expected, ...distractors].sort(() => Math.random() - 0.5)
+}
+
+function _showMCQOptions(options) {
+  const container = $('mcq-options')
+  container.innerHTML = ''
+  const letters = ['A', 'B', 'C', 'D']
+  options.forEach((opt, i) => {
+    const btn = document.createElement('button')
+    btn.className = 'mcq-option'
+    btn.dataset.value = opt
+    btn.innerHTML = `<span class="mcq-letter">${letters[i]}</span><span>${esc(opt)}</span>`
+    btn.onclick = () => _submitMCQ(opt, container)
+    container.appendChild(btn)
+  })
+  container.classList.remove('hidden')
+}
+
+function _submitMCQ(selected, container) {
+  container.querySelectorAll('.mcq-option').forEach(btn => {
+    btn.disabled = true
+    if (btn.dataset.value === state.expected) btn.classList.add('mcq-correct')
+    else if (btn.dataset.value === selected)  btn.classList.add('mcq-wrong')
+  })
+
+  state.userAnswer = selected
+  const isCorrect = selected === state.expected
+
+  $('answer-area').classList.add('hidden')
+  $('inline-chat').classList.add('hidden')
+  $('inline-msgs').innerHTML = ''
+  $('inline-input').value = ''
+  $('result-area').classList.remove('hidden')
+  $('result-card').className = 'result-card'
+  $('result-card').innerHTML = ''
+
+  _renderResult({
+    statut: isCorrect ? 'Réussi' : 'Échoué',
+    explication: isCorrect ? 'Bonne réponse !' : 'Ce n\'était pas la bonne option.',
+    reponse_ideale: state.expected,
+  })
 }
 
 // ── Chat inline ───────────────────────────────────────────────────────────────

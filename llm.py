@@ -37,7 +37,8 @@ Règles :
 - Si le texte mentionne des chiffres ou des noms propres importants, ancre la question dessus
 - La question doit être précise et contextualisée, pas vague
 - La réponse attendue doit être courte (1-2 phrases max)
-Réponds au format JSON uniquement : {{"question": "...", "reponse_attendue": "..."}}"""
+- Les 3 distracteurs doivent être du MÊME TYPE que la bonne réponse (si c'est une date → d'autres dates plausibles ; si c'est un chiffre → d'autres chiffres proches ; si c'est un concept → des concepts voisins), suffisamment plausibles pour tromper quelqu'un qui n'a pas bien révisé, mais clairement faux
+Réponds au format JSON uniquement : {{"question": "...", "reponse_attendue": "...", "distracteurs": ["...", "...", "..."]}}"""
 
     response = _call(
         _client.models.generate_content,
@@ -46,6 +47,24 @@ Réponds au format JSON uniquement : {{"question": "...", "reponse_attendue": ".
         config={"thinking_config": {"thinking_budget": 0}},
     )
     return _extract_json(response.text)
+
+
+def generate_distractors(question: str, expected: str, content: str) -> list[str]:
+    prompt = f"""Question : {question}
+Réponse correcte : {expected}
+Contexte : {content}
+
+Génère exactement 3 réponses incorrectes mais plausibles à cette question.
+Les distracteurs doivent être du MÊME TYPE que la bonne réponse (si c'est une date → d'autres dates plausibles ; si c'est un chiffre → d'autres chiffres proches ; si c'est un concept → des concepts voisins). Suffisamment plausibles pour tromper quelqu'un qui n'a pas bien révisé, mais clairement faux.
+Réponds au format JSON uniquement : {{"distracteurs": ["...", "...", "..."]}}"""
+
+    response = _call(
+        _client.models.generate_content,
+        model=GEMINI_MODEL,
+        contents=prompt,
+        config={"thinking_config": {"thinking_budget": 0}},
+    )
+    return _extract_json(response.text)["distracteurs"]
 
 
 def evaluate_answer(question: str, expected: str, user_answer: str, source_file: str, heading_path: str) -> dict:
