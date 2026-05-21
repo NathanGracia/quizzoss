@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comment ça marche — Quizzoss</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Barlow+Condensed:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #080810;
+      --surface:     #0f0f1a;
+      --surface-2:   #141426;
+      --border:      #1e1e38;
+      --dim:         #2a2a4a;
+      --text:        #f0f0ff;
+      --text-2:      #9090b8;
+      --muted:       #444466;
+      --accent:      #7c6df8;
+      --accent-2:    #a89dfa;
+      --accent-dim:  rgba(124,109,248,.12);
+      --ok:          #34d399;
+      --half:        #f59e0b;
+      --err:         #f87171;
+      --font:        'Space Mono', monospace;
+      --font-display:'Barlow Condensed', sans-serif;
+    }
+
+    html { font-size: 16px; scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    body::after {
+      content: '';
+      position: fixed; inset: 0; z-index: 999; pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 2px,
+        rgba(0,0,0,0.055) 2px, rgba(0,0,0,0.055) 4px
+      );
+    }
+
+    /* ── Header ── */
+    header {
+      position: sticky; top: 0; z-index: 50;
+      background: var(--bg);
+      border-bottom: 2px solid var(--accent);
+    }
+    .header-inner {
+      max-width: 900px; margin: 0 auto;
+      padding: .9rem 2rem;
+      display: flex; align-items: center; gap: 1.5rem;
+    }
+    .logo { display: flex; align-items: center; gap: .5rem; font-family: var(--font-display); font-weight: 700; font-size: 1.2rem; letter-spacing: .04em; text-decoration: none; color: var(--text); }
+    .logo-mark { color: var(--accent); font-size: 1.3rem; }
+    .header-back { font-size: .7rem; color: var(--text-2); text-decoration: none; border: 1px solid var(--dim); padding: .25rem .75rem; letter-spacing: .05em; }
+    .header-back:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Layout ── */
+    .page { max-width: 900px; margin: 0 auto; padding: 4rem 2rem 6rem; }
+
+    /* ── Hero ── */
+    .hero-kicker { font-size: .7rem; color: var(--accent); letter-spacing: .15em; text-transform: uppercase; margin-bottom: 1rem; }
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: clamp(2.8rem, 7vw, 5.5rem);
+      font-weight: 900;
+      line-height: .95;
+      letter-spacing: -.01em;
+      margin-bottom: 1.5rem;
+    }
+    .hero-title .dim { color: var(--text-2); font-weight: 300; }
+    .hero-sub { font-size: .85rem; color: var(--text-2); max-width: 520px; line-height: 1.8; margin-bottom: 3rem; }
+
+    /* ── Section ── */
+    .section { margin-top: 5rem; }
+    .section-num { font-size: .65rem; color: var(--accent); letter-spacing: .15em; text-transform: uppercase; margin-bottom: .75rem; }
+    .section-title {
+      font-family: var(--font-display);
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 700;
+      line-height: 1.1;
+      margin-bottom: 1rem;
+    }
+    .section-body { font-size: .82rem; color: var(--text-2); line-height: 1.9; max-width: 640px; }
+    .section-body p + p { margin-top: .8rem; }
+    .section-body strong { color: var(--text); font-weight: 700; }
+    .section-body .accent { color: var(--accent); }
+
+    /* ── Divider ── */
+    .divider { border: none; border-top: 1px solid var(--border); margin: 4rem 0 0; }
+
+    /* ── RAG Diagram ── */
+    .rag-diagram {
+      margin-top: 2.5rem;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr;
+      align-items: center;
+      gap: 0;
+    }
+    .rag-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 1rem 1.25rem;
+      text-align: center;
+    }
+    .rag-box.accent-box { border-color: var(--accent); background: var(--accent-dim); }
+    .rag-box-label { font-size: .58rem; color: var(--text-2); letter-spacing: .1em; text-transform: uppercase; margin-bottom: .4rem; }
+    .rag-box-value { font-family: var(--font-display); font-size: 1.1rem; font-weight: 700; color: var(--text); }
+    .rag-box.accent-box .rag-box-value { color: var(--accent-2); }
+    .rag-arrow { text-align: center; padding: 0 .5rem; color: var(--muted); font-size: 1.2rem; }
+
+    /* ── Pipeline Diagram ── */
+    .pipeline {
+      margin-top: 2.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .pipe-row {
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      gap: 1.5rem;
+      align-items: start;
+      position: relative;
+    }
+    .pipe-row + .pipe-row { margin-top: 0; }
+    .pipe-row + .pipe-row .pipe-step { border-top: none; }
+
+    .pipe-step {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      padding: .75rem 1rem;
+      text-align: center;
+      position: relative;
+    }
+    .pipe-step::after {
+      content: '↓';
+      position: absolute;
+      bottom: -1.3rem; left: 50%;
+      transform: translateX(-50%);
+      color: var(--muted);
+      font-size: .85rem;
+      z-index: 2;
+      background: var(--bg);
+      padding: 0 .2rem;
+    }
+    .pipe-row:last-child .pipe-step::after { display: none; }
+    .pipe-step-icon { font-size: 1.2rem; margin-bottom: .25rem; }
+    .pipe-step-label { font-size: .65rem; letter-spacing: .08em; text-transform: uppercase; color: var(--text-2); }
+    .pipe-step-name { font-family: var(--font-display); font-size: 1rem; font-weight: 700; }
+    .pipe-step.hi { border-color: var(--accent); background: var(--accent-dim); }
+    .pipe-step.hi .pipe-step-name { color: var(--accent-2); }
+
+    .pipe-detail {
+      padding: .75rem 0;
+      border-left: 2px solid var(--dim);
+      padding-left: 1.25rem;
+      margin-left: .5rem;
+    }
+    .pipe-detail-title { font-size: .75rem; color: var(--text); font-weight: 700; margin-bottom: .35rem; }
+    .pipe-detail-body { font-size: .72rem; color: var(--text-2); line-height: 1.7; }
+    .pipe-connector {
+      height: 1.6rem;
+      display: flex; align-items: center;
+      padding-left: 79px;
+      color: var(--muted);
+      font-size: .8rem;
+    }
+
+    /* ── Eval Diagram ── */
+    .eval-diagram {
+      margin-top: 2.5rem;
+      display: flex;
+      gap: 1px;
+      flex-direction: column;
+    }
+    .eval-row {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 1px;
+      background: var(--dim);
+    }
+    .eval-cell {
+      background: var(--surface);
+      padding: .75rem 1rem;
+      font-size: .72rem;
+    }
+    .eval-cell-label { color: var(--text-2); font-size: .6rem; letter-spacing: .08em; text-transform: uppercase; margin-bottom: .2rem; }
+    .eval-cell-val { color: var(--text); }
+    .eval-arrow-cell { background: var(--bg); display: flex; align-items: center; justify-content: center; padding: .5rem; color: var(--muted); font-size: .9rem; }
+    .eval-result { display: flex; gap: 1px; margin-top: 1px; background: var(--dim); }
+    .eval-outcome { flex: 1; background: var(--surface); padding: .75rem 1rem; text-align: center; }
+    .eval-outcome-badge { font-size: .65rem; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; margin-bottom: .2rem; }
+    .eval-outcome-desc { font-size: .62rem; color: var(--text-2); }
+    .ok { color: var(--ok); }
+    .half { color: var(--half); }
+    .err { color: var(--err); }
+
+    /* ── Context Box (tutor) ── */
+    .context-grid {
+      margin-top: 2.5rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--dim);
+    }
+    .ctx-cell {
+      background: var(--surface);
+      padding: 1rem 1.25rem;
+    }
+    .ctx-cell.full { grid-column: 1 / -1; }
+    .ctx-label { font-size: .6rem; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-2); margin-bottom: .35rem; }
+    .ctx-val { font-size: .75rem; color: var(--text-2); line-height: 1.7; }
+    .ctx-val strong { color: var(--text); }
+    .ctx-arrow {
+      grid-column: 1 / -1;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--bg);
+      padding: .6rem;
+      gap: .5rem;
+      font-size: .65rem; color: var(--muted); letter-spacing: .05em;
+    }
+
+    /* ── Chunk Viz ── */
+    .chunk-viz {
+      margin-top: 2.5rem;
+      font-size: .72rem;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .chunk-viz-header {
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+      padding: .5rem 1rem;
+      font-size: .6rem;
+      color: var(--text-2);
+      letter-spacing: .08em;
+    }
+    .chunk-file { padding: .75rem 1rem; }
+    .chunk-filename { color: var(--accent-2); font-size: .72rem; margin-bottom: .5rem; }
+    .chunk-item {
+      display: flex;
+      align-items: baseline;
+      gap: .75rem;
+      padding: .3rem .5rem;
+      border-left: 2px solid transparent;
+    }
+    .chunk-item.active { border-left-color: var(--accent); background: var(--accent-dim); }
+    .chunk-heading { color: var(--text-2); }
+    .chunk-item.active .chunk-heading { color: var(--text); }
+    .chunk-badge {
+      margin-left: auto;
+      font-size: .58rem;
+      color: var(--accent);
+      letter-spacing: .05em;
+      white-space: nowrap;
+    }
+    .chunk-arrow { padding: .2rem 1rem; color: var(--muted); font-size: .65rem; }
+
+    /* ── Callout ── */
+    .callout {
+      margin-top: 2rem;
+      border: 1px solid var(--accent);
+      background: var(--accent-dim);
+      padding: 1.25rem 1.5rem;
+    }
+    .callout-title { font-size: .65rem; color: var(--accent-2); letter-spacing: .1em; text-transform: uppercase; margin-bottom: .4rem; }
+    .callout-body { font-size: .78rem; color: var(--text-2); line-height: 1.8; }
+    .callout-body strong { color: var(--text); }
+
+    /* ── Footer ── */
+    .doc-footer {
+      margin-top: 5rem;
+      border-top: 1px solid var(--border);
+      padding-top: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: .68rem;
+      color: var(--muted);
+    }
+    .doc-footer a { color: var(--accent); text-decoration: none; }
+    .doc-footer a:hover { text-decoration: underline; }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      .page { padding: 2.5rem 1.25rem 4rem; }
+      .rag-diagram { grid-template-columns: 1fr; }
+      .rag-arrow { transform: rotate(90deg); }
+      .pipe-row { grid-template-columns: 1fr; }
+      .context-grid { grid-template-columns: 1fr; }
+      .eval-row { grid-template-columns: 1fr; }
+      .eval-arrow-cell { display: none; }
+      .doc-footer { flex-direction: column; gap: .75rem; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-inner">
+      <a href="/" class="logo"><span class="logo-mark">◈</span><span>Quizzoss</span></a>
+      <a href="/" class="header-back">← Accueil</a>
+    </div>
+  </header>
+
+  <main class="page">
+
+    <!-- Hero -->
+    <div class="hero-kicker">// Documentation</div>
+    <h1 class="hero-title">Comment<br><span class="dim">ça marche</span></h1>
+    <p class="hero-sub">
+      Quizzoss transforme des notes Markdown en quiz interactif piloté par l'IA de Google.
+      Cette page explique le pipeline, le rôle de chaque composant, et pourquoi ça fonctionne mieux qu'un chatbot générique.
+    </p>
+
+    <!-- Section 1 : RAG -->
+    <hr class="divider">
+    <div class="section">
+      <div class="section-num">// 01 — Le principe fondamental</div>
+      <h2 class="section-title">Le RAG en 30 secondes</h2>
+      <div class="section-body">
+        <p>
+          RAG signifie <strong>Retrieval-Augmented Generation</strong> — génération augmentée par récupération.
+          L'idée : plutôt que de demander à l'IA de générer des questions "sur la géopolitique" depuis sa mémoire globale,
+          on lui donne <strong>le bon paragraphe, au bon moment</strong>.
+        </p>
+        <p>
+          L'IA ne travaille jamais à l'aveugle. À chaque étape — génération de question, évaluation, tutorat —
+          elle reçoit exactement <span class="accent">le contenu de la note concernée</span>.
+          Le résultat : des questions précises, ancrées dans ce qui a réellement été étudié.
+        </p>
+      </div>
+
+      <div class="rag-diagram">
+        <div class="rag-box">
+          <div class="rag-box-label">Sans RAG</div>
+          <div class="rag-box-value">"Parle-moi de X"</div>
+        </div>
+        <div class="rag-arrow">→</div>
+        <div class="rag-box">
+          <div class="rag-box-label">Réponse générique</div>
+          <div class="rag-box-value">Mémoire globale</div>
+        </div>
+        <div class="rag-arrow"></div>
+        <div class="rag-box" style="border-color:var(--err);opacity:.5">
+          <div class="rag-box-label">Résultat</div>
+          <div class="rag-box-value" style="color:var(--err)">Questions hors-sujet</div>
+        </div>
+      </div>
+
+      <div class="rag-diagram" style="margin-top:1px">
+        <div class="rag-box accent-box">
+          <div class="rag-box-label">Avec RAG (Quizzoss)</div>
+          <div class="rag-box-value">Note section §3.2</div>
+        </div>
+        <div class="rag-arrow">→</div>
+        <div class="rag-box accent-box">
+          <div class="rag-box-label">Contexte injecté</div>
+          <div class="rag-box-value">Gemini lit le texte</div>
+        </div>
+        <div class="rag-arrow">→</div>
+        <div class="rag-box accent-box">
+          <div class="rag-box-label">Résultat</div>
+          <div class="rag-box-value">Questions précises</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2 : Pipeline -->
+    <hr class="divider">
+    <div class="section">
+      <div class="section-num">// 02 — Le pipeline complet</div>
+      <h2 class="section-title">Des notes aux questions</h2>
+      <div class="section-body">
+        <p>Le pipeline se déroule en deux temps : une phase de <strong>préparation</strong> (hors-ligne, déclenchée manuellement),
+        et une phase de <strong>quiz</strong> (en direct, côté serveur).</p>
+      </div>
+
+      <div class="pipeline" style="margin-top:2.5rem">
+
+        <div class="pipe-row">
+          <div class="pipe-step">
+            <div class="pipe-step-icon">📁</div>
+            <div class="pipe-step-label">Source</div>
+            <div class="pipe-step-name">Notes .md</div>
+          </div>
+          <div class="pipe-detail">
+            <div class="pipe-detail-title">Le coffre-fort de notes</div>
+            <div class="pipe-detail-body">
+              Fichiers Markdown organisés en dossiers. Compatible avec Obsidian — images, liens wiki, block embeds (<code>![[#^id]]</code>) sont supportés.
+            </div>
+          </div>
+        </div>
+
+        <div class="pipe-connector">↓ scanner.py lit chaque fichier</div>
+
+        <div class="pipe-row">
+          <div class="pipe-step">
+            <div class="pipe-step-icon">✂️</div>
+            <div class="pipe-step-label">Étape 1</div>
+            <div class="pipe-step-name">Découpage</div>
+          </div>
+          <div class="pipe-detail">
+            <div class="pipe-detail-title">Chunking par titre</div>
+            <div class="pipe-detail-body">
+              Chaque note est découpée en <strong>sections</strong> selon ses titres (H1, H2, H3…).
+              Chaque section devient un <em>chunk</em> — l'unité atomique du quiz.
+              Résultat stocké dans <code>chunks.json</code>.
+            </div>
+          </div>
+        </div>
+
+        <div class="pipe-connector">↓ prebuild.py envoie chaque chunk à Gemini</div>
+
+        <div class="pipe-row">
+          <div class="pipe-step hi">
+            <div class="pipe-step-icon">✦</div>
+            <div class="pipe-step-label">Étape 2 — IA</div>
+            <div class="pipe-step-name">Génération</div>
+          </div>
+          <div class="pipe-detail">
+            <div class="pipe-detail-title">Gemini génère pour chaque chunk</div>
+            <div class="pipe-detail-body">
+              <strong>1 question</strong> — précise, testable sur le contenu.<br>
+              <strong>1 réponse attendue</strong> — formulation idéale.<br>
+              <strong>3 distracteurs</strong> — fausses réponses du même type (dates vs dates, concepts vs concepts) pour le mode QCM.
+            </div>
+          </div>
+        </div>
+
+        <div class="pipe-connector">↓ stocké dans questions.json</div>
+
+        <div class="pipe-row">
+          <div class="pipe-step">
+            <div class="pipe-step-icon">🗄️</div>
+            <div class="pipe-step-label">Cache</div>
+            <div class="pipe-step-name">Banque de questions</div>
+          </div>
+          <div class="pipe-detail">
+            <div class="pipe-detail-title">questions.json</div>
+            <div class="pipe-detail-body">
+              Toutes les questions pré-générées. Pas d'appel IA au moment du quiz — la latence est quasi-nulle.
+              Le fichier est mis à jour via le bouton "↻ Mettre à jour les questions".
+            </div>
+          </div>
+        </div>
+
+        <div class="pipe-connector">↓ au démarrage du quiz</div>
+
+        <div class="pipe-row">
+          <div class="pipe-step">
+            <div class="pipe-step-icon">🎲</div>
+            <div class="pipe-step-label">Quiz</div>
+            <div class="pipe-step-name">Session × 10</div>
+          </div>
+          <div class="pipe-detail">
+            <div class="pipe-detail-title">10 questions tirées au hasard</div>
+            <div class="pipe-detail-body">
+              Le serveur sélectionne 10 questions aléatoires (filtrées par sujet si sélectionné).
+              Chaque question embarque sa note source pour l'évaluation et le tutorat.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Section 3 : Chunking -->
+    <hr class="divider">
+    <div class="section">
+      <div class="section-num">// 03 — Le découpage en sections</div>
+      <h2 class="section-title">Pourquoi découper ?</h2>
+      <div class="section-body">
+        <p>
+          Une note entière peut faire des dizaines de pages. Injecter tout ça dans le contexte de l'IA à chaque question serait
+          lent, coûteux, et produirait des questions vagues. En découpant par titre, chaque question porte
+          sur <strong>un seul concept précis</strong>.
+        </p>
+      </div>
+
+      <div class="chunk-viz">
+        <div class="chunk-viz-header">chunks.json — exemple</div>
+        <div class="chunk-file">
+          <div class="chunk-filename">Géopolitique / Énergie mondiale.md</div>
+          <div class="chunk-item">
+            <span class="chunk-heading">H1 · Introduction</span>
+            <span class="chunk-badge">chunk #1</span>
+          </div>
+          <div class="chunk-item active">
+            <span class="chunk-heading">H2 · Production d'énergie en France</span>
+            <span class="chunk-badge">chunk #2 · question générée ✓</span>
+          </div>
+          <div class="chunk-item">
+            <span class="chunk-heading">H3 · Part du nucléaire</span>
+            <span class="chunk-badge">chunk #3</span>
+          </div>
+          <div class="chunk-item">
+            <span class="chunk-heading">H2 · Mix énergétique européen</span>
+            <span class="chunk-badge">chunk #4</span>
+          </div>
+        </div>
+        <div class="chunk-arrow">→ chunk #2 → Gemini → "Quel est le principal mode de production d'électricité en France ?" + réponse + 3 distracteurs</div>
+      </div>
+    </div>
+
+    <!-- Section 4 : Évaluation -->
+    <hr class="divider">
+    <div class="section">
+      <div class="section-num">// 04 — L'évaluation nuancée</div>
+      <h2 class="section-title">Pas de correspondance exacte</h2>
+      <div class="section-body">
+        <p>
+          Comparer deux chaînes de texte mot pour mot ne fonctionne pas : "75%" et "soixante-quinze pour cent" sont la même réponse.
+          Gemini relit le contexte complet et juge avec nuance.
+        </p>
+      </div>
+
+      <div class="eval-diagram">
+        <div class="eval-row">
+          <div class="eval-cell">
+            <div class="eval-cell-label">Contenu de la note</div>
+            <div class="eval-cell-val">La France produit ~70% de son électricité via le nucléaire…</div>
+          </div>
+          <div class="eval-arrow-cell">+</div>
+          <div class="eval-cell">
+            <div class="eval-cell-label">Question + Réponse attendue</div>
+            <div class="eval-cell-val">"Quel est le taux de production nucléaire ?" → "environ 70%"</div>
+          </div>
+        </div>
+        <div class="eval-row">
+          <div class="eval-cell" style="grid-column:1/-1">
+            <div class="eval-cell-label">Réponse utilisateur (exemples)</div>
+            <div class="eval-cell-val" style="display:flex;gap:1.5rem;flex-wrap:wrap">
+              <span class="ok">"72%" → ±10% → Réussi</span>
+              <span class="half">"le nucléaire" → incomplet → Incomplet</span>
+              <span class="err">"2024" → hors-sujet → Échoué</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="eval-result">
+        <div class="eval-outcome">
+          <div class="eval-outcome-badge ok">Réussi</div>
+          <div class="eval-outcome-desc">Réponse correcte, éventuellement formulée différemment ou dans la tolérance ±10% pour les chiffres</div>
+        </div>
+        <div class="eval-outcome">
+          <div class="eval-outcome-badge half">Incomplet</div>
+          <div class="eval-outcome-desc">Partiellement correct — bonne piste mais un élément clé manque</div>
+        </div>
+        <div class="eval-outcome">
+          <div class="eval-outcome-badge err">Échoué</div>
+          <div class="eval-outcome-desc">Réponse inexacte ou hors-sujet par rapport à la note</div>
+        </div>
+      </div>
+
+      <div class="callout" style="margin-top:1.5rem">
+        <div class="callout-title">Règle sur les dates</div>
+        <div class="callout-body">
+          La tolérance ±10% s'applique aux quantités numériques (<strong>pas aux dates</strong>).
+          "1945" n'est pas équivalent à "1950" — les dates sont évaluées strictement.
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 5 : Tuteur -->
+    <hr class="divider">
+    <div class="section">
+      <div class="section-num">// 05 — Le tuteur IA</div>
+      <h2 class="section-title">Le contexte complet, pas juste la question</h2>
+      <div class="section-body">
+        <p>
+          Le tuteur reçoit beaucoup plus qu'une simple question. À chaque message, Gemini dispose du contexte
+          complet de l'interaction — ce qui lui permet de répondre avec précision et cohérence sur toute la session.
+        </p>
+      </div>
+
+      <div class="context-grid">
+        <div class="ctx-cell">
+          <div class="ctx-label">Contenu de la note</div>
+          <div class="ctx-val">Le texte exact de la section source — la "mémoire" du tuteur sur ce sujet.</div>
+        </div>
+        <div class="ctx-cell">
+          <div class="ctx-label">La question posée</div>
+          <div class="ctx-val">La question générée pour cette note — donne le fil conducteur de l'échange.</div>
+        </div>
+        <div class="ctx-cell">
+          <div class="ctx-label">La réponse donnée</div>
+          <div class="ctx-val">Ce qui a été répondu — le tuteur peut corriger ou approfondir directement.</div>
+        </div>
+        <div class="ctx-cell">
+          <div class="ctx-label">L'évaluation</div>
+          <div class="ctx-val">Réussi / Incomplet / Échoué — le tuteur sait déjà où ça coince.</div>
+        </div>
+        <div class="ctx-arrow">
+          ↓ tout ça constitue le prompt système du tuteur ↓
+        </div>
+        <div class="ctx-cell full">
+          <div class="ctx-label">Historique de la conversation</div>
+          <div class="ctx-val">
+            <strong>Chaque message</strong> s'ajoute à l'historique. Le tuteur garde le fil de toute la discussion —
+            y compris dans le bilan de fin de session, où l'historique de chaque question est préservé.
+          </div>
+        </div>
+      </div>
+
+      <div class="callout">
+        <div class="callout-title">Au-delà de la note</div>
+        <div class="callout-body">
+          Si la réponse à une question dépasse ce qui est dans la note, le tuteur peut l'expliquer —
+          il le signale brièvement. L'objectif est de <strong>vraiment comprendre</strong>, pas de répéter le texte.
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 6 : Mode QCM -->
+    <hr class="divider">
+    <div class="section">
+      <div class="section-num">// 06 — Le mode QCM</div>
+      <h2 class="section-title">Des distracteurs intelligents</h2>
+      <div class="section-body">
+        <p>
+          Le mode QCM propose 4 options : la bonne réponse + 3 distracteurs générés par Gemini au moment de la création de la question.
+          La contrainte : les distracteurs doivent être du <strong>même type</strong> que la bonne réponse.
+        </p>
+        <p>
+          Si la réponse correcte est une date (1945), les distracteurs sont aussi des dates (1939, 1918, 1973) —
+          pas des concepts ou des noms propres. Ça rend le QCM difficile pour les bonnes raisons.
+        </p>
+      </div>
+
+      <div class="rag-diagram" style="margin-top:2rem">
+        <div class="rag-box accent-box">
+          <div class="rag-box-label">Bonne réponse</div>
+          <div class="rag-box-value">~70%</div>
+        </div>
+        <div class="rag-arrow">+</div>
+        <div class="rag-box">
+          <div class="rag-box-label">Distracteurs (même type)</div>
+          <div class="rag-box-value">45% · 88% · 31%</div>
+        </div>
+        <div class="rag-arrow">→</div>
+        <div class="rag-box">
+          <div class="rag-box-label">Options mélangées</div>
+          <div class="rag-box-value">4 choix · ordre aléatoire</div>
+        </div>
+      </div>
+
+      <div class="callout" style="margin-top:1.5rem">
+        <div class="callout-title">Évaluation QCM</div>
+        <div class="callout-body">
+          En mode QCM, l'évaluation est <strong>immédiate et locale</strong> — pas d'appel API.
+          Le bon choix est connu à l'avance ; l'IA n'intervient qu'ensuite via le tuteur si une question est posée.
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 7 : Modèles -->
+    <hr class="divider">
+    <div class="section">
+      <div class="section-num">// 07 — Les modèles utilisés</div>
+      <h2 class="section-title">Gemini Flash — pourquoi ?</h2>
+      <div class="section-body">
+        <p>
+          Quizzoss utilise <strong>Gemini 2.5 Flash</strong> pour toutes les tâches. Flash est rapide et économique —
+          adapté à des appels fréquents (un par chunk lors du prebuild, un par réponse lors de l'évaluation).
+        </p>
+        <p>
+          Sur les tâches structurées (génération de question, évaluation), le <strong>mode "thinking" est désactivé</strong> :
+          Gemini répond directement en JSON sans raisonnement intermédiaire. Plus rapide, moins coûteux, aussi précis pour ces tâches courtes.
+          Le thinking reste actif pour le tutorat, où le raisonnement en plusieurs étapes est utile.
+        </p>
+      </div>
+
+      <div class="context-grid" style="margin-top:2rem">
+        <div class="ctx-cell">
+          <div class="ctx-label">Génération de question</div>
+          <div class="ctx-val">Flash · thinking désactivé · 1 appel / chunk · sortie JSON</div>
+        </div>
+        <div class="ctx-cell">
+          <div class="ctx-label">Évaluation de réponse</div>
+          <div class="ctx-val">Flash · thinking désactivé · 1 appel / réponse · sortie JSON</div>
+        </div>
+        <div class="ctx-cell full">
+          <div class="ctx-label">Tutorat (chat)</div>
+          <div class="ctx-val">Flash · thinking actif · historique complet injecté · réponse libre</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="doc-footer">
+      <span>Quizzoss · <a href="/">nathangracia.com</a></span>
+      <span>Gemini 2.5 Flash · FastAPI · Vanilla JS</span>
+    </div>
+
+  </main>
+
+</body>
+</html>

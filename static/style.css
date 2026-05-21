@@ -158,6 +158,16 @@ main {
   display: flex; flex-direction: column; gap: .5rem;
 }
 .home-how li:last-child { border-right: none; }
+.home-how-link {
+  margin-top: .75rem;
+  font-size: .68rem;
+}
+.home-how-link a {
+  color: var(--text-2);
+  text-decoration: none;
+  letter-spacing: .04em;
+}
+.home-how-link a:hover { color: var(--accent); }
 .how-bullet {
   font-family: var(--font);
   font-size: .65rem; letter-spacing: .1em;
