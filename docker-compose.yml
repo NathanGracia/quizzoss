@@ -1,0 +1,10 @@
+services:
+  quizzoss:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file: .env
+    volumes:
+      - ${VAULT_ROOT}:${VAULT_ROOT}:ro
+      - ./questions.json:/app/questions.json
+    restart: unless-stopped
