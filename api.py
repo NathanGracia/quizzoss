@@ -1,7 +1,7 @@
 import json
 import random
 from pathlib import Path
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException, Header, BackgroundTasks
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -143,6 +143,34 @@ def update_note(req: NoteUpdateRequest, x_edit_password: str | None = Header(def
         raise HTTPException(404, "Note introuvable")
     path.write_text(req.content, encoding="utf-8")
     return {"ok": True}
+
+
+_rebuild_status: dict = {"running": False, "result": None, "error": None}
+
+
+def _do_rebuild():
+    try:
+        from prebuild import rebuild
+        result = rebuild()
+        _rebuild_status.update({"running": False, "result": result, "error": None})
+    except Exception as e:
+        _rebuild_status.update({"running": False, "result": None, "error": str(e)})
+
+
+@app.post("/api/rebuild")
+def start_rebuild(background_tasks: BackgroundTasks, x_edit_password: str | None = Header(default=None)):
+    if EDIT_PASSWORD and x_edit_password != EDIT_PASSWORD:
+        raise HTTPException(401, "Mot de passe incorrect")
+    if _rebuild_status["running"]:
+        raise HTTPException(409, "Reconstruction déjà en cours")
+    _rebuild_status.update({"running": True, "result": None, "error": None})
+    background_tasks.add_task(_do_rebuild)
+    return {"ok": True}
+
+
+@app.get("/api/rebuild/status")
+def get_rebuild_status():
+    return _rebuild_status
 
 
 app.mount("/", StaticFiles(directory="static", html=True), name="static")

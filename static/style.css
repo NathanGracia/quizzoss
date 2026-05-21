@@ -206,6 +206,16 @@ main {
   font-size: .65rem; letter-spacing: .2em; text-transform: uppercase;
   color: var(--accent);
 }
+.rebuild-controls {
+  display: flex; align-items: center; gap: .75rem;
+}
+.rebuild-status {
+  font-size: .7rem; letter-spacing: .1em; color: var(--muted);
+}
+.btn-sm {
+  font-size: .65rem; padding: .3rem .75rem;
+  box-shadow: 2px 2px 0 var(--accent);
+}
 
 /* ── Library ─────────────────────────────── */
 .library-list {
@@ -424,7 +434,7 @@ main {
 /* ── End screen ──────────────────────────── */
 .end-wrap {
   display: flex; flex-direction: column; align-items: center;
-  text-align: center; padding: 5rem 2rem;
+  text-align: center; padding: 4rem 2rem 2rem;
 }
 .end-icon {
   font-size: 3.5rem; color: var(--accent);
@@ -465,6 +475,55 @@ main {
   display: flex; gap: .875rem; flex-wrap: wrap; justify-content: center;
 }
 
+/* ── Récapitulatif de fin ────────────────── */
+.end-recap {
+  width: 100%; max-width: 720px; margin: 0 auto;
+  padding: 0 1.5rem 4rem;
+  display: flex; flex-direction: column; gap: 1.25rem;
+}
+.recap-title {
+  font-family: var(--font-display);
+  font-weight: 900; font-size: 1.4rem;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted);
+  padding-bottom: .75rem;
+  border-bottom: var(--stroke) solid var(--dim);
+}
+.recap-item {
+  border: var(--stroke) solid var(--dim);
+  background: var(--surface);
+  box-shadow: 3px 3px 0 var(--dim);
+}
+.recap-header {
+  display: flex; align-items: center; gap: .75rem;
+  padding: .6rem 1rem;
+  border-bottom: var(--stroke) solid var(--dim);
+  background: var(--bg);
+}
+.recap-num {
+  font-family: var(--font-display);
+  font-weight: 900; font-size: .8rem; letter-spacing: .12em;
+  color: var(--accent);
+}
+.recap-source {
+  font-size: .65rem; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted);
+}
+.recap-question {
+  padding: .875rem 1rem;
+  border-bottom: var(--stroke) solid var(--dim);
+  font-size: .9rem; line-height: 1.6;
+}
+.recap-answer {
+  padding: .75rem 1rem;
+  font-size: .85rem; color: var(--text-2);
+}
+.recap-answer-label {
+  display: block;
+  font-size: .6rem; letter-spacing: .15em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: .25rem;
+}
+
 /* ── Chat inline ─────────────────────────── */
 .inline-chat {
   margin-top: 1.5rem;
@@ -474,7 +533,7 @@ main {
 .inline-msgs {
   display: flex; flex-direction: column; gap: .75rem;
   padding: 1.25rem 1.5rem;
-  max-height: 280px;
+  max-height: 520px;
   overflow-y: auto;
 }
 .inline-msgs:empty { display: none; }
@@ -498,7 +557,7 @@ main {
 }
 .imsg.bot p { margin-bottom: .4rem; }
 .imsg.bot p:last-child { margin-bottom: 0; }
-.imsg.bot ul { padding-left: 1.25rem; }
+.imsg.bot ul, .imsg.bot ol { padding-left: 1.5rem; }
 .imsg.bot strong { color: var(--text); }
 .imsg.typing {
   display: flex; gap: .35rem; align-items: center;

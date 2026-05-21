@@ -11,6 +11,7 @@ const state = {
   userAnswer: null,
   evalResult: null,
   chatHistory: [],
+  history: [],  // { chunk, question, expected, userAnswer, evalResult, chatHistory }
 }
 
 let _currentNoteFile = null
@@ -110,6 +111,7 @@ async function startSession() {
   state.session = data.questions
   state.index = 0
   state.score = 0
+  state.history = []
   showQuestion(0)
 }
 
@@ -169,6 +171,9 @@ async function submitAnswer() {
   state.userAnswer = answer
 
   $('answer-area').classList.add('hidden')
+  $('inline-chat').classList.add('hidden')
+  $('inline-msgs').innerHTML = ''
+  $('inline-input').value = ''
   $('result-area').classList.remove('hidden')
   $('result-card').className = 'result-card'
   $('result-card').innerHTML = `<div style="color:var(--muted);font-size:.875rem">Évaluation en cours…</div>`
@@ -197,6 +202,14 @@ async function submitAnswer() {
 
   const result = await res.json()
   state.evalResult = result
+  state.history.push({
+    chunk: state.chunk,
+    question: state.question,
+    expected: state.expected,
+    userAnswer: state.userAnswer,
+    evalResult: result,
+    chatHistory: [],
+  })
   const statut = result.statut?.toLowerCase() ?? ''
   const ok   = statut.includes('réussi')
   const half = statut.includes('incomplet')
@@ -220,8 +233,6 @@ async function submitAnswer() {
   if (srcLink) srcLink.onclick = () => openNote(state.chunk.source_file, state.chunk.heading_path)
 
   state.chatHistory = []
-  $('inline-msgs').innerHTML = ''
-  $('inline-input').value = ''
   $('inline-chat').classList.remove('hidden')
 
   const nextBtn = $('next-btn')
@@ -258,6 +269,93 @@ function showEndScreen() {
 
   $('end-title').textContent = title
   $('end-msg').textContent = msg
+  _buildRecap()
+}
+
+function _buildRecap() {
+  const recap = $('end-recap')
+  recap.innerHTML = state.history.length
+    ? `<h2 class="recap-title">Récapitulatif</h2>`
+    : ''
+
+  state.history.forEach((item, i) => {
+    const { chunk, question, userAnswer, evalResult } = item
+    const statut = evalResult?.statut?.toLowerCase() ?? ''
+    const ok   = statut.includes('réussi')
+    const half = statut.includes('incomplet')
+    const cls  = ok ? 'ok' : half ? 'half' : 'err'
+    const icon = ok ? '✓' : half ? '◑' : '✗'
+
+    const div = document.createElement('div')
+    div.className = 'recap-item'
+    div.innerHTML = `
+      <div class="recap-header">
+        <span class="recap-num">Q${i + 1}</span>
+        <span class="recap-source">${esc(chunk.source_file.split('/').pop().replace('.md',''))} › ${esc(chunk.heading_path.split(' > ').pop())}</span>
+        <span class="result-status ${cls}" style="margin-left:auto;font-size:.75rem">${icon} ${esc(evalResult?.statut ?? '?')}</span>
+      </div>
+      <div class="recap-question">${esc(question)}</div>
+      <div class="recap-answer">
+        <span class="recap-answer-label">Ta réponse</span>
+        ${esc(userAnswer || '—')}
+      </div>
+      ${evalResult ? `<div class="result-card ${cls}" style="border:none;border-top:var(--stroke) solid var(--dim);box-shadow:none">
+        ${evalResult.explication ? `<div class="result-expl">${esc(evalResult.explication)}</div>` : ''}
+        ${evalResult.reponse_ideale ? `<div class="result-ideal"><span class="result-ideal-label">Réponse idéale</span>${esc(evalResult.reponse_ideale)}</div>` : ''}
+      </div>` : ''}
+      <div class="inline-chat" style="border-top:var(--stroke) solid var(--dim)">
+        <div class="inline-msgs" id="recap-msgs-${i}"></div>
+        <div class="inline-chat-row">
+          <textarea class="inline-input" id="recap-input-${i}" rows="1"
+            placeholder="Poser une question sur cette correction…"
+            onkeydown="handleRecapKey(event,${i})"></textarea>
+          <button class="btn btn-primary" onclick="sendRecapChat(${i})">→</button>
+        </div>
+      </div>
+    `
+    recap.appendChild(div)
+  })
+}
+
+async function sendRecapChat(idx) {
+  const item = state.history[idx]
+  const input = document.getElementById(`recap-input-${idx}`)
+  const msgs  = document.getElementById(`recap-msgs-${idx}`)
+  const msg   = input.value.trim()
+  if (!msg || !item) return
+  input.value = ''
+
+  msgs.innerHTML += `<div class="imsg user">${esc(msg)}</div>`
+  const typingId = 'typing-' + Date.now()
+  msgs.innerHTML += `<div class="imsg typing" id="${typingId}"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`
+  msgs.scrollTop = msgs.scrollHeight
+
+  const res = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      source_file:  item.chunk.source_file,
+      heading_path: item.chunk.heading_path,
+      question:     item.question,
+      user_answer:  item.userAnswer,
+      eval_result:  item.evalResult,
+      history:      item.chatHistory,
+      message:      msg,
+    }),
+  })
+
+  const data = await res.json()
+  document.getElementById(typingId)?.remove()
+  const html = typeof marked !== 'undefined' ? marked.parse(data.response) : esc(data.response)
+  msgs.innerHTML += `<div class="imsg bot">${html}</div>`
+  msgs.scrollTop = msgs.scrollHeight
+
+  item.chatHistory.push({ role: 'user',  text: msg })
+  item.chatHistory.push({ role: 'model', text: data.response })
+}
+
+function handleRecapKey(e, idx) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendRecapChat(idx) }
 }
 
 // ── Chat inline ───────────────────────────────────────────────────────────────
@@ -357,6 +455,79 @@ async function loadLibrary() {
   }
 
   list.dataset.loaded = '1'
+}
+
+// ── Rebuild ───────────────────────────────────────────────────────────────────
+
+let _rebuildPoll = null
+
+async function triggerRebuild() {
+  let pwd = sessionStorage.getItem('edit_pwd')
+  if (!pwd) {
+    pwd = prompt('Mot de passe admin :')
+    if (!pwd) return
+    sessionStorage.setItem('edit_pwd', pwd)
+  }
+
+  const btn = $('rebuild-btn')
+  const status = $('rebuild-status')
+
+  btn.disabled = true
+  status.textContent = 'Lancement…'
+
+  const res = await fetch('/api/rebuild', {
+    method: 'POST',
+    headers: { 'X-Edit-Password': pwd },
+  })
+
+  if (res.status === 401) {
+    sessionStorage.removeItem('edit_pwd')
+    btn.disabled = false
+    status.textContent = ''
+    alert('Mot de passe incorrect.')
+    return
+  }
+  if (res.status === 409) {
+    btn.disabled = false
+    status.textContent = 'Déjà en cours…'
+    return
+  }
+  if (!res.ok) {
+    btn.disabled = false
+    const err = await res.json().catch(() => ({}))
+    status.textContent = `✗ ${err.detail || res.status}`
+    return
+  }
+
+  status.textContent = 'Scan…'
+  _rebuildPoll = setInterval(_pollRebuild, 2000)
+}
+
+async function _pollRebuild() {
+  const res = await fetch('/api/rebuild/status')
+  const data = await res.json()
+  const status = $('rebuild-status')
+  const btn = $('rebuild-btn')
+
+  if (data.running) {
+    status.textContent = 'Génération…'
+    return
+  }
+
+  clearInterval(_rebuildPoll)
+  btn.disabled = false
+
+  if (data.error) {
+    status.textContent = `✗ ${data.error}`
+    return
+  }
+
+  if (data.result) {
+    const { new: n, removed, total } = data.result
+    status.textContent = `✓ +${n} / -${removed} (${total} total)`
+    $('library-list').removeAttribute('data-loaded')
+    loadLibrary()
+  }
 }
 
 // ── Note viewer ───────────────────────────────────────────────────────────────

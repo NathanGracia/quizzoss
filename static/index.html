@@ -53,8 +53,14 @@
 
       <div class="home-library">
         <div class="home-section-header">
-          <h2 class="home-section-title">Bibliothèque</h2>
-          <p class="home-section-sub">Toutes tes notes Obsidian</p>
+          <div>
+            <h2 class="home-section-title">Bibliothèque</h2>
+            <p class="home-section-sub">Toutes tes notes Obsidian</p>
+          </div>
+          <div class="rebuild-controls">
+            <span id="rebuild-status" class="rebuild-status"></span>
+            <button class="btn btn-sm" id="rebuild-btn" onclick="triggerRebuild()">↻ Mettre à jour les questions</button>
+          </div>
         </div>
         <div id="library-list" class="library-list"></div>
       </div>
@@ -137,6 +143,7 @@
           <button class="btn btn-ghost btn-lg" onclick="goHome()">Accueil</button>
         </div>
       </div>
+      <div id="end-recap" class="end-recap"></div>
     </div>
 
     <!-- Viewer de note -->
@@ -162,6 +169,6 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script src="app.js?v=12"></script>
+  <script src="app.js?v=15"></script>
 </body>
 </html>

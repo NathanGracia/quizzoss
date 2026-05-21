@@ -40,7 +40,10 @@ Règles :
 Réponds au format JSON uniquement : {{"question": "...", "reponse_attendue": "..."}}"""
 
     response = _call(
-        _client.models.generate_content, model=GEMINI_MODEL, contents=prompt
+        _client.models.generate_content,
+        model=GEMINI_MODEL,
+        contents=prompt,
+        config={"thinking_config": {"thinking_budget": 0}},
     )
     return _extract_json(response.text)
 
@@ -55,11 +58,16 @@ Source : {source_file} — {heading_path}
 {{
   "statut": "Réussi" si la réponse est correcte et complète, "Incomplet" si elle contient une partie de l'idée mais manque des éléments importants, "Échoué" si elle est incorrecte ou hors sujet,
   "explication": "une phrase max sur ce qui manque ou confirme si correct",
-  "reponse_ideale": "réponse complète et bien formulée à la question, en 2-4 phrases, sans jamais commencer par 'Selon le texte', 'D'après le texte' ou toute formulation similaire — formule directement la réponse"
-}}"""
+  "reponse_ideale": "réponse complète et bien formulée en 2-4 phrases"
+}}
+INTERDICTION ABSOLUE : ne commence jamais reponse_ideale ni explication par "Selon le texte", "D'après le texte", "Le texte indique", "Le texte précise", "D'après le document" ou toute formulation similaire qui fait référence à une source. Formule la réponse directement, comme un fait établi.
+Règle importante pour les chiffres : si la réponse attendue contient un nombre quantitatif (statistique, pourcentage, quantité, superficie, population…) et que l'utilisateur donne un nombre dans un écart de ±10%, considère la réponse comme correcte sur ce point (ex: attendu 56, répondu 55 → correct). Cette tolérance ne s'applique PAS aux dates et années : une date doit être exacte."""
 
     response = _call(
-        _client.models.generate_content, model=GEMINI_EVAL_MODEL, contents=prompt
+        _client.models.generate_content,
+        model=GEMINI_EVAL_MODEL,
+        contents=prompt,
+        config={"thinking_config": {"thinking_budget": 0}},
     )
     return _extract_json(response.text)
 
