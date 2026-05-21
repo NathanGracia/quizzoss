@@ -8,8 +8,15 @@ const state = {
   chunk: null,
   question: null,
   expected: null,
+  userAnswer: null,
+  evalResult: null,
   chatHistory: [],
 }
+
+let _currentNoteFile = null
+let _currentNoteMd   = ''
+let _editMode        = false
+let _lastMainState   = 'home'  // 'home' | 'quiz' | 'end'
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 
@@ -24,12 +31,68 @@ async function init() {
     sel.appendChild(opt)
   })
   sel.addEventListener('change', () => { state.topic = sel.value })
+
+  const { note, section } = _getUrlParams()
+  if (note) {
+    await _renderNote(note, section)
+  } else {
+    $('state-home').classList.remove('hidden')
+    loadLibrary()
+  }
+}
+
+// ── Routing ───────────────────────────────────────────────────────────────────
+
+function _getUrlParams() {
+  const p = new URLSearchParams(location.search)
+  return {
+    note:    p.get('note') || null,
+    section: p.get('section') || null,
+  }
+}
+
+function _pushUrl(params) {
+  const sp = new URLSearchParams()
+  if (params.note) sp.set('note', params.note)
+  if (params.section) sp.set('section', params.section)
+  const qs = sp.toString()
+  history.pushState(params, '', qs ? `?${qs}` : location.pathname)
+}
+
+window.addEventListener('popstate', () => {
+  const { note, section } = _getUrlParams()
+  if (note) {
+    _renderNote(note, section)
+  } else {
+    _restoreMainView()
+  }
+})
+
+function _restoreMainView() {
+  document.querySelectorAll('.state').forEach(s => s.classList.add('hidden'))
+  if (_lastMainState === 'quiz') {
+    $('state-quiz').classList.remove('hidden')
+  } else if (_lastMainState === 'end') {
+    $('state-end').classList.remove('hidden')
+  } else {
+    $('state-home').classList.remove('hidden')
+  }
+}
+
+function goHome() {
+  _lastMainState = 'home'
+  const { note } = _getUrlParams()
+  if (note) _pushUrl({})
+  document.querySelectorAll('.state').forEach(s => s.classList.add('hidden'))
+  $('state-home').classList.remove('hidden')
+  loadLibrary()
 }
 
 // ── Session ───────────────────────────────────────────────────────────────────
 
 async function startSession() {
-  $('state-welcome').classList.add('hidden')
+  _lastMainState = 'quiz'
+  $('state-home').classList.add('hidden')
   $('state-end').classList.add('hidden')
   $('state-quiz').classList.remove('hidden')
   showQuizSkeleton()
@@ -65,6 +128,7 @@ function showQuestion(i) {
 
   $('src-file').textContent = q.chunk.source_file.split('/').pop().replace('.md', '')
   $('src-section').textContent = q.chunk.heading_path
+  $('src-file').onclick = () => openNote(q.chunk.source_file, q.chunk.heading_path)
 
   $('q-skeleton').classList.add('hidden')
   $('q-text').textContent = q.question
@@ -102,6 +166,7 @@ function skipQuestion() {
 async function submitAnswer() {
   const answer = $('answer-input').value.trim()
   if (!answer || !state.chunk) return
+  state.userAnswer = answer
 
   $('answer-area').classList.add('hidden')
   $('result-area').classList.remove('hidden')
@@ -120,10 +185,23 @@ async function submitAnswer() {
     }),
   })
 
+  if (!res.ok) {
+    $('result-card').className = 'result-card err'
+    $('result-card').innerHTML = `<div class="result-status err">✗ Erreur LLM — réessaie</div>`
+    const nextBtn = $('next-btn')
+    const isLast2 = state.index >= state.session.length - 1
+    nextBtn.textContent = isLast2 ? 'Voir les résultats →' : 'Question suivante →'
+    nextBtn.onclick = isLast2 ? showEndScreen : () => showQuestion(state.index + 1)
+    return
+  }
+
   const result = await res.json()
-  const ok  = result.statut?.toLowerCase().includes('réussi')
-  const cls = ok ? 'ok' : 'err'
-  const icon = ok ? '✓' : '✗'
+  state.evalResult = result
+  const statut = result.statut?.toLowerCase() ?? ''
+  const ok   = statut.includes('réussi')
+  const half = statut.includes('incomplet')
+  const cls  = ok ? 'ok' : half ? 'half' : 'err'
+  const icon = ok ? '✓' : half ? '◑' : '✗'
 
   if (ok) state.score++
   $('q-score').textContent = `${state.score} ✓`
@@ -134,8 +212,17 @@ async function submitAnswer() {
   $('result-card').innerHTML = `
     <div class="result-status ${cls}">${icon} ${result.statut ?? '?'}</div>
     ${result.explication ? `<div class="result-expl">${esc(result.explication)}</div>` : ''}
-    <div class="result-source">→ ${esc(state.chunk.source_file)}</div>
+    ${result.reponse_ideale ? `<div class="result-ideal"><span class="result-ideal-label">Réponse idéale</span>${esc(result.reponse_ideale)}</div>` : ''}
+    <div class="result-source note-link" id="result-source-link">→ ${esc(state.chunk.source_file)}</div>
   `
+
+  const srcLink = $('result-source-link')
+  if (srcLink) srcLink.onclick = () => openNote(state.chunk.source_file, state.chunk.heading_path)
+
+  state.chatHistory = []
+  $('inline-msgs').innerHTML = ''
+  $('inline-input').value = ''
+  $('inline-chat').classList.remove('hidden')
 
   const nextBtn = $('next-btn')
   nextBtn.textContent = isLast ? 'Voir les résultats →' : 'Question suivante →'
@@ -143,7 +230,7 @@ async function submitAnswer() {
 }
 
 function handleKey(e) {
-  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+  if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault()
     submitAnswer()
   }
@@ -152,6 +239,7 @@ function handleKey(e) {
 // ── End screen ────────────────────────────────────────────────────────────────
 
 function showEndScreen() {
+  _lastMainState = 'end'
   $('state-quiz').classList.add('hidden')
   $('state-end').classList.remove('hidden')
 
@@ -172,41 +260,20 @@ function showEndScreen() {
   $('end-msg').textContent = msg
 }
 
-// ── Chat ──────────────────────────────────────────────────────────────────────
+// ── Chat inline ───────────────────────────────────────────────────────────────
 
-function openChat() {
-  if (!state.chunk) return
-  state.chatHistory = []
-  $('chat-sub').textContent = state.chunk.heading_path
-
-  $('chat-msgs').innerHTML = `
-    <div class="msg bot">
-      Bonjour ! Je suis ton tuteur pour la section
-      <strong>${esc(state.chunk.heading_path)}</strong>. Pose-moi tes questions.
-    </div>
-  `
-  $('chat-backdrop').classList.remove('hidden')
-  $('chat-drawer').classList.remove('hidden')
-  setTimeout(() => $('chat-input').focus(), 50)
-}
-
-function closeChat() {
-  $('chat-backdrop').classList.add('hidden')
-  $('chat-drawer').classList.add('hidden')
-}
-
-async function sendChat() {
-  const input = $('chat-input')
+async function sendInlineChat() {
+  const input = $('inline-input')
   const msg   = input.value.trim()
   if (!msg || !state.chunk) return
   input.value = ''
 
-  const msgs = $('chat-msgs')
-  msgs.innerHTML += `<div class="msg user">${esc(msg)}</div>`
+  const msgs = $('inline-msgs')
+  msgs.innerHTML += `<div class="imsg user">${esc(msg)}</div>`
 
   const typingId = 'typing-' + Date.now()
   msgs.innerHTML += `
-    <div class="msg typing" id="${typingId}">
+    <div class="imsg typing" id="${typingId}">
       <div class="dot"></div><div class="dot"></div><div class="dot"></div>
     </div>
   `
@@ -218,6 +285,9 @@ async function sendChat() {
     body: JSON.stringify({
       source_file:  state.chunk.source_file,
       heading_path: state.chunk.heading_path,
+      question:     state.question,
+      user_answer:  state.userAnswer,
+      eval_result:  state.evalResult,
       history:      state.chatHistory,
       message:      msg,
     }),
@@ -230,17 +300,222 @@ async function sendChat() {
     ? marked.parse(data.response)
     : esc(data.response)
 
-  msgs.innerHTML += `<div class="msg bot">${html}</div>`
+  msgs.innerHTML += `<div class="imsg bot">${html}</div>`
   msgs.scrollTop = msgs.scrollHeight
 
   state.chatHistory.push({ role: 'user',  text: msg })
   state.chatHistory.push({ role: 'model', text: data.response })
 }
 
-function handleChatKey(e) {
+function handleInlineKey(e) {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault()
-    sendChat()
+    sendInlineChat()
+  }
+}
+
+// ── Library ───────────────────────────────────────────────────────────────────
+
+async function loadLibrary() {
+  const list = $('library-list')
+  if (list.dataset.loaded) return
+  list.innerHTML = `<div style="color:var(--muted);padding:1rem">Chargement…</div>`
+
+  const res = await fetch('/api/library')
+  const { files } = await res.json()
+
+  const groups = {}
+  for (const file of files) {
+    const parts = file.split('/')
+    const name = parts.pop()
+    const folder = parts.join('/') || '—'
+    if (!groups[folder]) groups[folder] = []
+    groups[folder].push({ name, path: file })
+  }
+
+  list.innerHTML = ''
+  for (const [folder, items] of Object.entries(groups).sort()) {
+    const section = document.createElement('div')
+    section.className = 'lib-section'
+
+    const header = document.createElement('div')
+    header.className = 'lib-folder'
+    header.textContent = folder
+    section.appendChild(header)
+
+    const grid = document.createElement('div')
+    grid.className = 'lib-files-grid'
+    for (const f of items) {
+      const el = document.createElement('div')
+      el.className = 'lib-file'
+      el.textContent = f.name.replace('.md', '')
+      el.addEventListener('click', () => openNote(f.path))
+      grid.appendChild(el)
+    }
+    section.appendChild(grid)
+    list.appendChild(section)
+  }
+
+  list.dataset.loaded = '1'
+}
+
+// ── Note viewer ───────────────────────────────────────────────────────────────
+
+function preprocessMd(md) {
+  md = md.replace(/!\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g, (_, src) =>
+    `![](${src.trim()})`)
+  md = md.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
+    if (/^https?:\/\//.test(src)) return match
+    return `![${alt}](/api/asset?file=${encodeURIComponent(src.trim())})`
+  })
+  return md
+}
+
+async function openNote(file, section) {
+  _pushUrl({ note: file, section: section || undefined })
+  await _renderNote(file, section)
+}
+
+async function _renderNote(file, section) {
+  _editMode = false
+  _currentNoteFile = file
+  document.querySelectorAll('.state').forEach(s => s.classList.add('hidden'))
+  $('state-note').classList.remove('hidden')
+  $('note-view-title').textContent = file.split('/').pop().replace('.md', '')
+  $('note-view-body').innerHTML = `<p style="color:var(--muted)">Chargement…</p>`
+  $('note-view-body').classList.remove('hidden')
+  $('note-edit-area').classList.add('hidden')
+  $('edit-btn').textContent = 'Modifier'
+
+  const res = await fetch(`/api/note?file=${encodeURIComponent(file)}`)
+  if (!res.ok) {
+    $('note-view-body').innerHTML = `<p style="color:var(--err)">Note introuvable.</p>`
+    return
+  }
+  const { content } = await res.json()
+  _currentNoteMd = content
+  $('note-view-body').innerHTML = marked.parse(preprocessMd(content))
+  buildToc()
+
+  if (section) {
+    const heading = section.split(' > ').pop().toLowerCase()
+    for (const el of $('note-view-body').querySelectorAll('h1,h2,h3,h4,h5,h6')) {
+      if (el.textContent.trim().toLowerCase().includes(heading)) {
+        el.classList.add('note-highlight')
+        setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80)
+        break
+      }
+    }
+  }
+}
+
+function buildToc() {
+  const body     = $('note-view-body')
+  const toc      = $('note-toc')
+  const headings = [...body.querySelectorAll('h1,h2,h3,h4')]
+
+  toc.innerHTML = ''
+
+  if (headings.length < 3) { toc.classList.add('hidden'); return }
+  toc.classList.remove('hidden')
+
+  const label = document.createElement('div')
+  label.className = 'toc-label'
+  label.textContent = 'Sommaire'
+  toc.appendChild(label)
+
+  if (window._tocObserver) window._tocObserver.disconnect()
+
+  headings.forEach((h, i) => {
+    h.id = `h-${i}`
+    const a = document.createElement('a')
+    a.href = `#h-${i}`
+    a.className = `toc-link toc-${h.tagName.toLowerCase()}`
+    a.textContent = h.textContent
+    a.addEventListener('click', e => {
+      e.preventDefault()
+      h.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+    toc.appendChild(a)
+  })
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      const link = toc.querySelector(`a[href="#${entry.target.id}"]`)
+      if (link) link.classList.toggle('toc-active', entry.isIntersecting)
+    })
+  }, { rootMargin: '-10% 0px -80% 0px', threshold: 0 })
+
+  headings.forEach(h => observer.observe(h))
+  window._tocObserver = observer
+}
+
+function toggleEdit() {
+  if (_editMode) cancelEdit()
+  else enterEdit()
+}
+
+function enterEdit() {
+  if (!sessionStorage.getItem('edit_pwd')) {
+    const pwd = prompt('Mot de passe pour éditer :')
+    if (!pwd) return
+    sessionStorage.setItem('edit_pwd', pwd)
+  }
+  _editMode = true
+  $('note-editor').value = _currentNoteMd
+  $('note-view-body').classList.add('hidden')
+  $('note-toc').classList.add('hidden')
+  $('note-edit-area').classList.remove('hidden')
+  $('edit-btn').textContent = 'Aperçu'
+  $('note-editor').focus()
+}
+
+function cancelEdit() {
+  _editMode = false
+  $('note-view-body').classList.remove('hidden')
+  $('note-edit-area').classList.add('hidden')
+  $('edit-btn').textContent = 'Modifier'
+  buildToc()
+}
+
+async function saveNote() {
+  const content = $('note-editor').value
+  const btn = $('edit-btn')
+  btn.textContent = 'Sauvegarde…'
+  btn.disabled = true
+
+  const res = await fetch('/api/note', {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Edit-Password': sessionStorage.getItem('edit_pwd') || '',
+    },
+    body: JSON.stringify({ file: _currentNoteFile, content }),
+  })
+
+  btn.disabled = false
+  if (res.status === 401) {
+    sessionStorage.removeItem('edit_pwd')
+    btn.textContent = 'Aperçu'
+    alert('Mot de passe incorrect.')
+    return
+  }
+  if (!res.ok) {
+    btn.textContent = 'Aperçu'
+    alert('Erreur lors de la sauvegarde.')
+    return
+  }
+
+  _currentNoteMd = content
+  $('note-view-body').innerHTML = marked.parse(preprocessMd(content))
+  cancelEdit()
+}
+
+function closeNote() {
+  if (history.state !== null) {
+    history.back()
+  } else {
+    goHome()
   }
 }
 

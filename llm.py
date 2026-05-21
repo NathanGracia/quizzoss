@@ -3,18 +3,17 @@ import re
 import time
 from google import genai
 from google.genai import errors as genai_errors
-from config import GEMINI_API_KEY, GEMINI_MODEL
+from config import GEMINI_API_KEY, GEMINI_MODEL, GEMINI_EVAL_MODEL
 
 _client = genai.Client(api_key=GEMINI_API_KEY)
 
 
 def _call(fn, *args, **kwargs):
-    """Appel Gemini avec retry exponentiel sur 503."""
-    delays = [2, 5, 10]
+    delays = [2, 5]
     for i, delay in enumerate(delays):
         try:
             return fn(*args, **kwargs)
-        except genai_errors.ServerError as e:
+        except genai_errors.ServerError:
             if i == len(delays) - 1:
                 raise
             print(f"[llm] 503 — retry dans {delay}s...")
@@ -53,21 +52,38 @@ Réponse de l'utilisateur : {user_answer}
 Source : {source_file} — {heading_path}
 
 Évalue la réponse de l'utilisateur. Réponds au format JSON uniquement :
-{{"statut": "Réussi" ou "Échoué", "explication": "courte explication de l'écart si nécessaire, sinon encouragement"}}"""
+{{
+  "statut": "Réussi" si la réponse est correcte et complète, "Incomplet" si elle contient une partie de l'idée mais manque des éléments importants, "Échoué" si elle est incorrecte ou hors sujet,
+  "explication": "une phrase max sur ce qui manque ou confirme si correct",
+  "reponse_ideale": "réponse complète et bien formulée à la question, en 2-4 phrases, sans jamais commencer par 'Selon le texte', 'D'après le texte' ou toute formulation similaire — formule directement la réponse"
+}}"""
 
     response = _call(
-        _client.models.generate_content, model=GEMINI_MODEL, contents=prompt
+        _client.models.generate_content, model=GEMINI_EVAL_MODEL, contents=prompt
     )
     return _extract_json(response.text)
 
 
-def chat(full_note: str, heading_path: str, history: list[dict], user_message: str) -> str:
+def chat(full_note: str, heading_path: str, history: list[dict], user_message: str,
+         question: str | None = None, user_answer: str | None = None, eval_result: dict | None = None) -> str:
+
+    quiz_context = ""
+    if question:
+        quiz_context += f"\nQuestion posée à l'utilisateur : {question}"
+    if user_answer:
+        quiz_context += f"\nRéponse donnée par l'utilisateur : {user_answer}"
+    if eval_result:
+        quiz_context += f"\nÉvaluation : {eval_result.get('statut', '')} — {eval_result.get('explication', '')}"
+        if eval_result.get('reponse_ideale'):
+            quiz_context += f"\nRéponse idéale : {eval_result['reponse_ideale']}"
+
     system = f"""Tu es un tuteur privé. Tu connais parfaitement la note suivante :
 
 {full_note}
 
-L'utilisateur a bloqué sur la section : {heading_path}.
-Réponds à ses questions en t'appuyant sur la note. Cite toujours la section source."""
+L'utilisateur révise la section : {heading_path}.{quiz_context}
+
+Réponds à ses questions en t'appuyant sur la note. Tu as accès à sa réponse et au résultat de l'évaluation pour contextualiser ton aide."""
 
     contents = []
     for msg in history:

@@ -4,39 +4,65 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Quizzoss</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Barlow+Condensed:wght@300;400;600;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
   <header>
     <div class="header-inner">
-      <div class="logo">
+      <div class="logo" onclick="goHome()">
         <span class="logo-mark">◈</span>
         <span>Quizzoss</span>
       </div>
-      <select id="topic-select" class="topic-select">
-        <option value="">Tous les sujets</option>
-      </select>
     </div>
   </header>
 
   <main>
 
-    <!-- Welcome -->
-    <div id="state-welcome" class="state">
-      <div class="welcome-wrap">
-        <div class="welcome-icon">◈</div>
-        <h1>Prêt à te tester ?</h1>
-        <p>10 questions uniques tirées de tes notes Obsidian.</p>
-        <button class="btn btn-primary btn-lg" onclick="startSession()">Démarrer la session →</button>
+    <!-- Home : quiz launcher + bibliothèque -->
+    <div id="state-home" class="state">
+
+      <div class="home-quiz">
+        <div class="home-hero">
+          <div class="hero-index">Révision · IA · Notes</div>
+          <div class="home-hero-content">
+            <div class="hero-tag">Gemini AI · Actif</div>
+            <h1>
+              Teste<br>
+              tes <span class="accent">notes</span><br>
+              <span class="outline">Obsidian</span>
+            </h1>
+            <ul class="home-how">
+              <li><span class="how-bullet">// 01</span>Question tirée au hasard de tes notes</li>
+              <li><span class="how-bullet">// 02</span>L'IA évalue et propose la réponse idéale</li>
+              <li><span class="how-bullet">// 03</span>Tuteur IA pour approfondir</li>
+            </ul>
+            <div class="home-launcher">
+              <select id="topic-select" class="topic-select">
+                <option value="">_ tous les sujets</option>
+              </select>
+              <button class="btn btn-primary btn-lg" onclick="startSession()">Lancer →</button>
+            </div>
+          </div>
+        </div>
       </div>
+
+      <div class="home-library">
+        <div class="home-section-header">
+          <h2 class="home-section-title">Bibliothèque</h2>
+          <p class="home-section-sub">Toutes tes notes Obsidian</p>
+        </div>
+        <div id="library-list" class="library-list"></div>
+      </div>
+
     </div>
 
-    <!-- Quiz -->
+    <!-- Quiz actif -->
     <div id="state-quiz" class="state hidden">
-
       <div class="session-progress">
         <div class="progress-info">
           <span id="q-progress" class="progress-label">Question 1 / 10</span>
@@ -65,27 +91,38 @@
         <textarea
           id="answer-input"
           class="answer-input"
-          placeholder="Ta réponse… (Ctrl+Entrée pour valider)"
+          placeholder="Ta réponse… (Entrée pour valider)"
           rows="3"
           onkeydown="handleKey(event)"
         ></textarea>
         <div class="actions">
           <button class="btn btn-primary" onclick="submitAnswer()">Valider ✓</button>
-          <button class="btn btn-ghost" onclick="openChat()">💬 Tuteur</button>
           <button class="btn btn-ghost" onclick="skipQuestion()">Passer →</button>
         </div>
       </div>
 
       <div id="result-area" class="result-area hidden">
         <div id="result-card" class="result-card"></div>
+        <div id="inline-chat" class="inline-chat hidden">
+          <div id="inline-msgs" class="inline-msgs"></div>
+          <div class="inline-chat-row">
+            <textarea
+              id="inline-input"
+              class="inline-input"
+              placeholder="Une question sur cette réponse… (Entrée pour envoyer)"
+              rows="2"
+              onkeydown="handleInlineKey(event)"
+            ></textarea>
+            <button class="btn btn-primary" onclick="sendInlineChat()">→</button>
+          </div>
+        </div>
         <button id="next-btn" class="btn btn-primary" style="margin-top:1.25rem">
           Question suivante →
         </button>
       </div>
-
     </div>
 
-    <!-- End screen -->
+    <!-- Écran de fin -->
     <div id="state-end" class="state hidden">
       <div class="end-wrap">
         <div class="end-icon">◈</div>
@@ -95,36 +132,36 @@
           <div id="end-bar" class="end-bar"></div>
         </div>
         <p id="end-msg" class="end-msg"></p>
-        <button class="btn btn-primary btn-lg" onclick="startSession()">Recommencer →</button>
+        <div class="end-actions">
+          <button class="btn btn-primary btn-lg" onclick="startSession()">Recommencer →</button>
+          <button class="btn btn-ghost btn-lg" onclick="goHome()">Accueil</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Viewer de note -->
+    <div id="state-note" class="state hidden">
+      <div class="note-nav">
+        <button class="btn btn-ghost btn-sm" onclick="closeNote()">← Retour</button>
+        <span id="note-view-title" class="note-view-title"></span>
+        <button class="btn btn-ghost btn-sm" id="edit-btn" onclick="toggleEdit()">Modifier</button>
+      </div>
+      <div class="note-layout">
+        <div id="note-view-body" class="note-body"></div>
+        <div id="note-edit-area" class="note-edit-area hidden">
+          <textarea id="note-editor" class="note-editor"></textarea>
+          <div class="edit-actions">
+            <button class="btn btn-primary" onclick="saveNote()">Sauvegarder</button>
+            <button class="btn btn-ghost" onclick="cancelEdit()">Annuler</button>
+          </div>
+        </div>
+        <aside id="note-toc" class="note-toc hidden"></aside>
       </div>
     </div>
 
   </main>
 
-  <!-- Chat drawer -->
-  <div id="chat-backdrop" class="chat-backdrop hidden" onclick="closeChat()"></div>
-  <div id="chat-drawer" class="chat-drawer hidden">
-    <div class="chat-header">
-      <div>
-        <div class="chat-title">💬 Tuteur IA</div>
-        <div class="chat-sub" id="chat-sub"></div>
-      </div>
-      <button class="icon-btn" onclick="closeChat()">✕</button>
-    </div>
-    <div id="chat-msgs" class="chat-msgs"></div>
-    <div class="chat-footer">
-      <textarea
-        id="chat-input"
-        class="chat-input"
-        placeholder="Pose ta question… (Entrée pour envoyer)"
-        rows="2"
-        onkeydown="handleChatKey(event)"
-      ></textarea>
-      <button class="btn btn-primary" onclick="sendChat()">Envoyer</button>
-    </div>
-  </div>
-
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script src="app.js"></script>
+  <script src="app.js?v=11"></script>
 </body>
 </html>

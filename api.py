@@ -1,11 +1,12 @@
 import json
 import random
 from pathlib import Path
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import llm
-from config import VAULT_ROOT
+from config import VAULT_ROOT, NOTES_DIR, EDIT_PASSWORD
 
 app = FastAPI()
 QUESTIONS_FILE = Path(__file__).parent / "questions.json"
@@ -68,12 +69,19 @@ class EvaluateRequest(BaseModel):
 
 @app.post("/api/evaluate")
 def evaluate(req: EvaluateRequest):
-    return llm.evaluate_answer(req.question, req.expected, req.user_answer, req.source_file, req.heading_path)
+    try:
+        return llm.evaluate_answer(req.question, req.expected, req.user_answer, req.source_file, req.heading_path)
+    except Exception as e:
+        print(f"[evaluate] erreur : {e}")
+        raise HTTPException(503, "LLM indisponible, réessaie.")
 
 
 class ChatRequest(BaseModel):
     source_file: str
     heading_path: str
+    question: str | None = None
+    user_answer: str | None = None
+    eval_result: dict | None = None
     history: list[dict]
     message: str
 
@@ -82,7 +90,59 @@ class ChatRequest(BaseModel):
 def chat(req: ChatRequest):
     path = VAULT_ROOT / req.source_file
     full_note = path.read_text(encoding="utf-8") if path.exists() else ""
-    return {"response": llm.chat(full_note, req.heading_path, req.history, req.message)}
+    return {"response": llm.chat(
+        full_note, req.heading_path, req.history, req.message,
+        question=req.question, user_answer=req.user_answer, eval_result=req.eval_result,
+    )}
+
+
+@app.get("/api/library")
+def get_library():
+    files = []
+    for path in sorted(NOTES_DIR.rglob("*.md")):
+        rel = path.relative_to(VAULT_ROOT)
+        files.append(str(rel).replace("\\", "/"))
+    return {"files": files}
+
+
+@app.get("/api/asset")
+def get_asset(file: str):
+    path = (VAULT_ROOT / file).resolve()
+    if path.is_relative_to(VAULT_ROOT.resolve()) and path.exists():
+        return FileResponse(path)
+    name = Path(file).name
+    for found in sorted(VAULT_ROOT.rglob(name)):
+        if found.is_file():
+            return FileResponse(found)
+    raise HTTPException(404, "Asset introuvable")
+
+
+@app.get("/api/note")
+def get_note(file: str):
+    path = (VAULT_ROOT / file).resolve()
+    if not path.is_relative_to(VAULT_ROOT.resolve()):
+        raise HTTPException(403, "Accès refusé")
+    if not path.exists():
+        raise HTTPException(404, "Note introuvable")
+    return {"content": path.read_text(encoding="utf-8"), "file": file}
+
+
+class NoteUpdateRequest(BaseModel):
+    file: str
+    content: str
+
+
+@app.put("/api/note")
+def update_note(req: NoteUpdateRequest, x_edit_password: str | None = Header(default=None)):
+    if EDIT_PASSWORD and x_edit_password != EDIT_PASSWORD:
+        raise HTTPException(401, "Mot de passe incorrect")
+    path = (VAULT_ROOT / req.file).resolve()
+    if not path.is_relative_to(VAULT_ROOT.resolve()):
+        raise HTTPException(403, "Accès refusé")
+    if not path.exists():
+        raise HTTPException(404, "Note introuvable")
+    path.write_text(req.content, encoding="utf-8")
+    return {"ok": True}
 
 
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
