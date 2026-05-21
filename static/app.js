@@ -234,7 +234,6 @@ async function submitAnswer() {
   const srcLink = $('result-source-link')
   if (srcLink) srcLink.onclick = () => _openNoteNewTab(state.chunk.source_file, state.chunk.heading_path)
 
-  state.chatHistory = []
   $('inline-chat').classList.remove('hidden')
 
   const nextBtn = $('next-btn')
