@@ -280,7 +280,7 @@ function showEndScreen() {
   if (pct >= 80)      { title = 'Excellent !';   msg = 'Le sujet est bien maîtrisé.' }
   else if (pct >= 60) { title = 'Bien joué !';   msg = 'Continuez comme ça.' }
   else if (pct >= 40) { title = 'Pas mal !';     msg = 'Encore un peu de révision et vous y êtes.' }
-  else                { title = 'À réviser.';    msg = 'Relisez vos notes et retentez !' }
+  else                { title = 'À réviser.';    msg = 'Relisez les notes et retentez !' }
 
   $('end-title').textContent = title
   $('end-msg').textContent = msg
