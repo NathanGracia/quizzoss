@@ -2,7 +2,7 @@ services:
   quizzoss:
     build: .
     ports:
-      - "8000:8000"
+      - "3005:8000"
     env_file: .env
     volumes:
       - ${VAULT_ROOT}:${VAULT_ROOT}:ro
