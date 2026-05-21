@@ -227,6 +227,15 @@ main {
 .home-library {
   padding-bottom: 5rem;
 }
+.library-disclaimer {
+  font-size: .72rem;
+  color: var(--muted);
+  border-left: 2px solid var(--dim);
+  padding: .4rem .9rem;
+  margin-bottom: 2rem;
+  line-height: 1.7;
+  font-style: italic;
+}
 .home-section-header {
   margin-bottom: 1.5rem;
   padding-bottom: .875rem;
