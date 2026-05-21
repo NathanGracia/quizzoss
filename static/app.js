@@ -262,10 +262,10 @@ function showEndScreen() {
   $('end-bar').style.width = `${pct}%`
 
   let title, msg
-  if (pct >= 80)      { title = 'Excellent !';   msg = 'Tu maîtrises bien le sujet.' }
-  else if (pct >= 60) { title = 'Bien joué !';   msg = 'Continue comme ça.' }
-  else if (pct >= 40) { title = 'Pas mal !';     msg = 'Encore un peu de révision et tu y es.' }
-  else                { title = 'À réviser.';    msg = 'Relis tes notes et retente !' }
+  if (pct >= 80)      { title = 'Excellent !';   msg = 'Le sujet est bien maîtrisé.' }
+  else if (pct >= 60) { title = 'Bien joué !';   msg = 'Continuez comme ça.' }
+  else if (pct >= 40) { title = 'Pas mal !';     msg = 'Encore un peu de révision et vous y êtes.' }
+  else                { title = 'À réviser.';    msg = 'Relisez vos notes et retentez !' }
 
   $('end-title').textContent = title
   $('end-msg').textContent = msg
@@ -296,7 +296,7 @@ function _buildRecap() {
       </div>
       <div class="recap-question">${esc(question)}</div>
       <div class="recap-answer">
-        <span class="recap-answer-label">Ta réponse</span>
+        <span class="recap-answer-label">Votre réponse</span>
         ${esc(userAnswer || '—')}
       </div>
       ${evalResult ? `<div class="result-card ${cls}" style="border:none;border-top:var(--stroke) solid var(--dim);box-shadow:none">
