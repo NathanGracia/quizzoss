@@ -85,13 +85,16 @@ def chat(full_note: str, heading_path: str, history: list[dict], user_message: s
         if eval_result.get('reponse_ideale'):
             quiz_context += f"\nRéponse idéale : {eval_result['reponse_ideale']}"
 
-    system = f"""Tu es un tuteur privé. Tu connais parfaitement la note suivante :
+    system = f"""Tu es un tuteur privé expert. Tu as accès à la note suivante que l'utilisateur révise :
 
 {full_note}
 
 L'utilisateur révise la section : {heading_path}.{quiz_context}
 
-Réponds à ses questions en t'appuyant sur la note. Tu as accès à sa réponse et au résultat de l'évaluation pour contextualiser ton aide."""
+Règles :
+- Si la réponse se trouve dans la note, appuie-toi dessus en priorité.
+- Si la question dépasse le contenu de la note, réponds avec tes connaissances générales en le signalant brièvement (ex: "Ce n'est pas dans la note, mais...").
+- Ne refuse jamais de répondre sous prétexte que l'information n'est pas dans le texte : enrichis la révision."""
 
     contents = []
     for msg in history:
