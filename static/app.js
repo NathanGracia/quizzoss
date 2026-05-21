@@ -210,6 +210,8 @@ async function submitAnswer() {
     evalResult: result,
     chatHistory: [],
   })
+  // Partage la référence — les messages du chat en cours alimentent l'item d'historique
+  state.chatHistory = state.history[state.history.length - 1].chatHistory
   const statut = result.statut?.toLowerCase() ?? ''
   const ok   = statut.includes('réussi')
   const half = statut.includes('incomplet')
@@ -314,6 +316,19 @@ function _buildRecap() {
       </div>
     `
     recap.appendChild(div)
+
+    // Rejouer l'historique de chat existant (messages échangés pendant le quiz)
+    if (item.chatHistory.length) {
+      const msgsEl = document.getElementById(`recap-msgs-${i}`)
+      item.chatHistory.forEach(msg => {
+        if (msg.role === 'user') {
+          msgsEl.innerHTML += `<div class="imsg user">${esc(msg.text)}</div>`
+        } else {
+          const html = typeof marked !== 'undefined' ? marked.parse(msg.text) : esc(msg.text)
+          msgsEl.innerHTML += `<div class="imsg bot">${html}</div>`
+        }
+      })
+    }
   })
 }
 
