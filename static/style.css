@@ -857,3 +857,59 @@ main:has(#state-note:not(.hidden)) {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--dim); }
 ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* ── Account widget (compte cooloss) ───────────────────────────────── */
+.account-widget-login {
+  font-size: .8rem; font-weight: 700;
+  color: var(--accent);
+  text-decoration: none;
+  padding: .4rem .9rem;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.account-widget-login:hover { background: var(--accent-dim); }
+
+.account-widget { position: relative; }
+.account-widget-trigger {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .3rem .8rem .3rem .3rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--text);
+}
+.account-widget-trigger:hover { border-color: var(--dim); }
+.account-widget-avatar {
+  width: 26px; height: 26px; border-radius: 50%;
+  object-fit: cover;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .6rem; font-weight: 700;
+}
+.account-widget-avatar--fallback { background: var(--accent); color: var(--bg); }
+.account-widget-name { font-size: .8rem; font-weight: 600; white-space: nowrap; }
+
+.account-widget-menu {
+  position: absolute; top: calc(100% + 6px); right: 0; min-width: 180px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(0,0,0,.5);
+  z-index: 100;
+}
+.account-widget-menu a {
+  display: block; padding: .6rem .85rem;
+  font-size: .8rem; color: var(--text);
+  text-decoration: none;
+  border-top: 1px solid var(--border);
+}
+.account-widget-menu a:first-child { border-top: none; }
+.account-widget-menu a:hover { background: var(--surface-3); }
+.account-widget-badge {
+  padding: .5rem .85rem .3rem;
+  font-size: .65rem; font-weight: 700; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--accent);
+}

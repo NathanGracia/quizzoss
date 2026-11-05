@@ -12,4 +12,5 @@ GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 GEMINI_EVAL_MODEL = os.getenv("GEMINI_EVAL_MODEL", "gemini-2.5-flash")
 
-EDIT_PASSWORD = os.getenv("EDIT_PASSWORD", "")
+# Compte partagé cooloss — remplace EDIT_PASSWORD (voir shared_auth.py)
+SHARED_SESSION_SECRET = os.getenv("SHARED_SESSION_SECRET", "")

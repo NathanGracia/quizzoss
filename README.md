@@ -9,10 +9,10 @@ Quiz app that generates questions from markdown notes using Gemini AI. Built wit
 - **Quiz sessions** — 10 questions drawn randomly from notes, with score tracking and a progress bar
 - **End-screen recap** — full history of all questions with your answers, corrections, and ideal answers. Chat history from the quiz carries over; you can continue the conversation per question.
 - **Inline tutor chat** — after each answer, chat with an AI tutor that knows the note, the question, your answer, and the evaluation. The tutor answers beyond the note content when needed (signals it briefly).
-- **On-demand question rebuild** — "Mettre à jour les questions" button on the homepage (password-protected): full vault scan, prunes obsolete questions, generates new ones and backfills missing distractors. Progress shown live.
+- **On-demand question rebuild** — "Mettre à jour les questions" button on the homepage (reserved to cooloss admins): full vault scan, prunes obsolete questions, generates new ones and backfills missing distractors. Progress shown live.
 - **Note library** — browse all notes as cards, grouped by folder
 - **Note viewer** — rendered markdown with image support, Obsidian block embeds (`![[#^block-id]]`), sticky table of contents, section scroll from source links
-- **Inline editor** — edit notes directly in the browser, password-protected
+- **Inline editor** — edit notes directly in the browser, reserved to cooloss admins
 - **Client-side routing** — notes have shareable URLs (`?note=path&section=heading`), browser back/forward works. Source links open in a new tab.
 
 ## Architecture
@@ -67,7 +67,7 @@ cp .env.example .env   # then fill in the values
 | `GEMINI_API_KEY` | ✓ | — | Google AI API key |
 | `GEMINI_MODEL` | | `gemini-2.5-flash` | Model used for question generation and chat |
 | `GEMINI_EVAL_MODEL` | | `gemini-2.5-flash` | Model used for answer evaluation |
-| `EDIT_PASSWORD` | | `""` (no auth) | Password required to save notes or trigger a rebuild from the browser. Leave empty to disable (useful in dev). |
+| `SHARED_SESSION_SECRET` | ✓ (prod) | `""` | HMAC secret for the shared cooloss session cookie — see "Accounts" below. Must match cooloss/Blindtoss/Memoss exactly. |
 
 ### Build the question bank
 
@@ -103,7 +103,16 @@ The **"↻ Mettre à jour les questions"** button on the homepage triggers a ful
 3. Generates questions + distractors for new sections
 4. Backfills distractors for existing questions that don't have them
 
-The button is password-protected by `EDIT_PASSWORD`. Progress is shown live; the library refreshes automatically when done.
+The button is reserved to cooloss admins (see "Accounts" below). Progress is shown live; the library refreshes automatically when done.
+
+## Accounts — managed by cooloss
+
+Since July 2026, Quizzoss recognizes accounts from the **cooloss** hub (`https://cooloss.nathangracia.com`) via the shared `nathangracia_session` cookie — see `~/docs/compte-unifie-cooloss.md` on the VPS for the full cross-app architecture. Summary:
+
+- `shared_auth.py` — verifies the cookie (HMAC-SHA256, secret `SHARED_SESSION_SECRET` from `.env`, never committed). Same port as `media-gallery/server/shared_auth.py`.
+- `GET /api/whoami` — `{loggedIn, username, displayName, isAdmin, avatarFile}`, used by the frontend since the cookie is `HttpOnly` (unreadable in JS).
+- `require_admin` dependency in `api.py` gates `PUT /api/note` and `POST /api/rebuild` — replaces the old shared `EDIT_PASSWORD` header entirely (removed).
+- `static/account-widget.js` — shared by `index.html`, mounted in the header (`<div id="account-widget">`): login link when logged out, avatar + dropdown ("Retourner sur cooloss" / "Modifier le profil" / "Se déconnecter") when logged in. `app.js` reads `AccountWidget.session.isAdmin` to hide the rebuild/edit buttons entirely for non-admins (defense in depth — the API already rejects them).
 
 ## Docker (production)
 

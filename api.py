@@ -1,15 +1,42 @@
 import json
 import random
 from pathlib import Path
-from fastapi import FastAPI, HTTPException, Header, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Request, Depends
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import llm
-from config import VAULT_ROOT, NOTES_DIR, EDIT_PASSWORD
+from config import VAULT_ROOT, NOTES_DIR, SHARED_SESSION_SECRET
+from shared_auth import SHARED_SESSION_COOKIE, verify_shared_token
 
 app = FastAPI()
 QUESTIONS_FILE = Path(__file__).parent / "questions.json"
+
+
+def get_shared_claims(request: Request) -> dict | None:
+    token = request.cookies.get(SHARED_SESSION_COOKIE)
+    return verify_shared_token(token, SHARED_SESSION_SECRET)
+
+
+def require_admin(request: Request) -> None:
+    """Gate des actions d'édition (sauvegarde de note, rebuild) — remplace l'ancien EDIT_PASSWORD unique."""
+    claims = get_shared_claims(request)
+    if not claims or not claims.get("isAdmin"):
+        raise HTTPException(401, "Réservé aux admins cooloss")
+
+
+@app.get("/api/whoami")
+def whoami(request: Request):
+    claims = get_shared_claims(request)
+    if not claims:
+        return {"loggedIn": False}
+    return {
+        "loggedIn": True,
+        "username": claims["username"],
+        "displayName": claims.get("displayName"),
+        "isAdmin": bool(claims.get("isAdmin")),
+        "avatarFile": claims.get("avatarFile"),
+    }
 
 
 def _load_questions(topic: str = "") -> list[dict]:
@@ -134,9 +161,7 @@ class NoteUpdateRequest(BaseModel):
 
 
 @app.put("/api/note")
-def update_note(req: NoteUpdateRequest, x_edit_password: str | None = Header(default=None)):
-    if EDIT_PASSWORD and x_edit_password != EDIT_PASSWORD:
-        raise HTTPException(401, "Mot de passe incorrect")
+def update_note(req: NoteUpdateRequest, _: None = Depends(require_admin)):
     path = (VAULT_ROOT / req.file).resolve()
     if not path.is_relative_to(VAULT_ROOT.resolve()):
         raise HTTPException(403, "Accès refusé")
@@ -159,9 +184,7 @@ def _do_rebuild():
 
 
 @app.post("/api/rebuild")
-def start_rebuild(background_tasks: BackgroundTasks, x_edit_password: str | None = Header(default=None)):
-    if EDIT_PASSWORD and x_edit_password != EDIT_PASSWORD:
-        raise HTTPException(401, "Mot de passe incorrect")
+def start_rebuild(background_tasks: BackgroundTasks, _: None = Depends(require_admin)):
     if _rebuild_status["running"]:
         raise HTTPException(409, "Reconstruction déjà en cours")
     _rebuild_status.update({"running": True, "result": None, "error": None})

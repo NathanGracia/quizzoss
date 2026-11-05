@@ -5,7 +5,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY api.py config.py llm.py main.py models.py parser.py prebuild.py quiz_engine.py scanner.py ./
+COPY api.py config.py llm.py main.py models.py parser.py prebuild.py quiz_engine.py scanner.py shared_auth.py ./
 COPY static/ ./static/
 
 EXPOSE 8000

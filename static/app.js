@@ -22,16 +22,31 @@ let _lastMainState   = 'home'  // 'home' | 'quiz' | 'end'
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 
-async function init() {
+async function loadTopics() {
   const res = await fetch('/api/topics')
   const { topics } = await res.json()
   const sel = $('topic-select')
+  while (sel.options.length > 1) sel.remove(1)
   topics.forEach(t => {
     const opt = document.createElement('option')
     opt.value = t
     opt.textContent = t.split('/').pop().replace('.md', '')
     sel.appendChild(opt)
   })
+}
+
+async function init() {
+  await AccountWidget.load()
+  AccountWidget.mount('account-widget')
+  // Défense en profondeur : l'API refuse déjà ces actions aux non-admins,
+  // mais autant ne pas afficher des boutons qui redirigeraient vers cooloss.
+  if (!AccountWidget.session.isAdmin) {
+    $('rebuild-btn').classList.add('hidden')
+    $('edit-btn').classList.add('hidden')
+  }
+
+  await loadTopics()
+  const sel = $('topic-select')
   sel.addEventListener('change', () => { state.topic = sel.value })
   $('mcq-check').addEventListener('change', e => { state.mcqMode = e.target.checked })
 
@@ -540,11 +555,9 @@ async function loadLibrary() {
 let _rebuildPoll = null
 
 async function triggerRebuild() {
-  let pwd = sessionStorage.getItem('edit_pwd')
-  if (!pwd) {
-    pwd = prompt('Mot de passe admin :')
-    if (!pwd) return
-    sessionStorage.setItem('edit_pwd', pwd)
+  if (!AccountWidget.session.isAdmin) {
+    location.href = `https://cooloss.nathangracia.com/login?next=${encodeURIComponent(location.href)}`
+    return
   }
 
   const btn = $('rebuild-btn')
@@ -553,16 +566,12 @@ async function triggerRebuild() {
   btn.disabled = true
   status.textContent = 'Lancement…'
 
-  const res = await fetch('/api/rebuild', {
-    method: 'POST',
-    headers: { 'X-Edit-Password': pwd },
-  })
+  const res = await fetch('/api/rebuild', { method: 'POST' })
 
   if (res.status === 401) {
-    sessionStorage.removeItem('edit_pwd')
     btn.disabled = false
     status.textContent = ''
-    alert('Mot de passe incorrect.')
+    alert('Réservé aux admins cooloss.')
     return
   }
   if (res.status === 409) {
@@ -605,6 +614,7 @@ async function _pollRebuild() {
     status.textContent = `✓ +${n} / -${removed} (${total} total)`
     $('library-list').removeAttribute('data-loaded')
     loadLibrary()
+    loadTopics()
   }
 }
 
@@ -734,10 +744,9 @@ function toggleEdit() {
 }
 
 function enterEdit() {
-  if (!sessionStorage.getItem('edit_pwd')) {
-    const pwd = prompt('Mot de passe pour éditer :')
-    if (!pwd) return
-    sessionStorage.setItem('edit_pwd', pwd)
+  if (!AccountWidget.session.isAdmin) {
+    location.href = `https://cooloss.nathangracia.com/login?next=${encodeURIComponent(location.href)}`
+    return
   }
   _editMode = true
   $('note-editor').value = _currentNoteMd
@@ -764,18 +773,14 @@ async function saveNote() {
 
   const res = await fetch('/api/note', {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Edit-Password': sessionStorage.getItem('edit_pwd') || '',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ file: _currentNoteFile, content }),
   })
 
   btn.disabled = false
   if (res.status === 401) {
-    sessionStorage.removeItem('edit_pwd')
     btn.textContent = 'Aperçu'
-    alert('Mot de passe incorrect.')
+    alert('Réservé aux admins cooloss.')
     return
   }
   if (!res.ok) {
